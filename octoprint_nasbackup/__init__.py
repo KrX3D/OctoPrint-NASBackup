@@ -19,13 +19,6 @@ from collections import deque
 import flask
 import octoprint.plugin
 
-try:
-    from apscheduler.schedulers.background import BackgroundScheduler
-    from apscheduler.triggers.cron import CronTrigger
-    _HAS_SCHEDULER = True
-except ImportError:
-    _HAS_SCHEDULER = False
-
 MAX_LOG_ENTRIES = 400
 
 
@@ -39,12 +32,14 @@ class NasBackupPlugin(
 ):
 
     def __init__(self):
-        self._scheduler      = None
-        self._startup_timer  = None
-        self._backup_running = False
-        self._backup_lock    = threading.Lock()
-        self._log_entries    = deque(maxlen=MAX_LOG_ENTRIES)
-        self._last_status    = {
+        self._schedule_thread  = None
+        self._schedule_stop    = threading.Event()
+        self._startup_timer    = None
+        self._next_run         = None   # datetime or None
+        self._backup_running   = False
+        self._backup_lock      = threading.Lock()
+        self._log_entries      = deque(maxlen=MAX_LOG_ENTRIES)
+        self._last_status      = {
             "status":  "never",
             "message": "No backup has been run yet.",
             "time":    None,
@@ -164,36 +159,12 @@ class NasBackupPlugin(
 
     def on_after_startup(self):
         self._plugin_log(
-            "NAS Backup plugin started (v{}) — APScheduler available: {}".format(
-                self._plugin_version, _HAS_SCHEDULER
-            )
+            "NAS Backup plugin started (v{})".format(self._plugin_version)
         )
 
-        if not _HAS_SCHEDULER:
-            self._plugin_log(
-                "APScheduler not available — trying to install it now..."
-            )
-            try:
-                subprocess.run(
-                    ["pip", "install", "apscheduler"],
-                    capture_output=True, timeout=60
-                )
-                self._plugin_log(
-                    "APScheduler install attempted. Restart OctoPrint to activate scheduling."
-                )
-            except Exception as exc:
-                self._plugin_log(
-                    "Could not auto-install APScheduler: {}. "
-                    "Run: ~/oprint/bin/pip install apscheduler".format(exc)
-                )
-        else:
-            self._scheduler = BackgroundScheduler(daemon=True)
-            self._scheduler.start()
-            self._reschedule()
-
-        enabled          = self._get_bool("enabled")
-        backup_on_start  = self._get_bool("backup_on_startup")
-        delay            = int(self._settings.get(["startup_delay"]) or 120)
+        enabled         = self._get_bool("enabled")
+        backup_on_start = self._get_bool("backup_on_startup")
+        delay           = int(self._settings.get(["startup_delay"]) or 120)
 
         self._plugin_log(
             "Startup config: enabled={} backup_on_startup={} startup_delay={}s "
@@ -206,6 +177,10 @@ class NasBackupPlugin(
             )
         )
 
+        # Start the schedule thread
+        self._reschedule()
+
+        # Startup backup
         if enabled and backup_on_start:
             self._plugin_log("Startup backup armed — will fire in {}s.".format(delay))
             self._startup_timer = threading.Timer(delay, self._run_backup)
@@ -221,14 +196,10 @@ class NasBackupPlugin(
     # ── ShutdownPlugin ────────────────────────────────────────────────────────
 
     def on_shutdown(self):
+        self._schedule_stop.set()
         if self._startup_timer is not None:
             self._startup_timer.cancel()
             self._startup_timer = None
-        if self._scheduler and self._scheduler.running:
-            try:
-                self._scheduler.shutdown(wait=False)
-            except Exception:
-                pass
 
     # ── SimpleApiPlugin ───────────────────────────────────────────────────────
 
@@ -263,44 +234,36 @@ class NasBackupPlugin(
         return flask.abort(400)
 
     def on_api_get(self, request):
-        next_run = None
-        if self._scheduler:
+        next_run_str = None
+        if self._next_run is not None:
             try:
-                job = self._scheduler.get_job("nasbackup_job")
-                if job and job.next_run_time:
-                    nrt = job.next_run_time
-                    try:
-                        nrt = nrt.replace(tzinfo=None)
-                    except Exception:
-                        pass
-                    next_run = nrt.strftime("%Y-%m-%d %H:%M:%S")
-            except Exception as exc:
-                self._plugin_log("Could not read next_run_time: {}".format(exc))
+                next_run_str = self._next_run.strftime("%Y-%m-%d %H:%M:%S")
+            except Exception:
+                pass
 
         return flask.jsonify(dict(
             running=self._backup_running,
             last_status=self._last_status,
-            next_run=next_run,
+            next_run=next_run_str,
             startup_pending=(
                 self._startup_timer is not None and self._startup_timer.is_alive()
             ),
             logs=list(self._log_entries),
         ))
 
-    # ── Scheduling ────────────────────────────────────────────────────────────
+    # ── Scheduling (pure Python, no APScheduler needed) ───────────────────────
 
     def _reschedule(self):
-        if not self._scheduler:
-            self._plugin_log("_reschedule called but scheduler not available.")
-            return
+        """Stop existing schedule thread and start a new one with current settings."""
+        # Signal old thread to stop
+        self._schedule_stop.set()
+        if self._schedule_thread and self._schedule_thread.is_alive():
+            self._schedule_thread.join(timeout=2)
 
-        try:
-            self._scheduler.remove_all_jobs()
-        except Exception:
-            pass
+        self._schedule_stop.clear()
+        self._next_run = None
 
-        enabled = self._get_bool("enabled")
-        if not enabled:
+        if not self._get_bool("enabled"):
             self._plugin_log("Scheduling skipped — plugin disabled.")
             return
 
@@ -309,54 +272,118 @@ class NasBackupPlugin(
             self._plugin_log("Schedule type is disabled — manual trigger only.")
             return
 
-        trigger = self._build_cron_trigger(schedule_type)
-        if trigger is None:
+        next_run = self._calc_next_run()
+        if next_run is None:
             self._plugin_log(
-                "WARNING: Could not build cron trigger for type '{}'.".format(schedule_type)
+                "WARNING: Could not calculate next run for type '{}'.".format(schedule_type)
             )
             return
 
-        self._scheduler.add_job(
-            func=self._run_backup,
-            trigger=trigger,
-            id="nasbackup_job",
-            replace_existing=True,
-            max_instances=1,
+        self._next_run = next_run
+        self._plugin_log(
+            "Backup scheduled: type={} next_run={}".format(
+                schedule_type, next_run.strftime("%Y-%m-%d %H:%M:%S")
+            )
         )
 
-        # Log next run time
-        try:
-            job = self._scheduler.get_job("nasbackup_job")
-            nrt = job.next_run_time.replace(tzinfo=None) if job else None
+        self._schedule_thread = threading.Thread(
+            target=self._schedule_loop, name="nasbackup-scheduler", daemon=True
+        )
+        self._schedule_thread.start()
+
+    def _schedule_loop(self):
+        """
+        Runs in background thread. Sleeps until next_run, fires backup,
+        recalculates next_run, repeats.
+        """
+        while not self._schedule_stop.is_set():
+            now     = datetime.datetime.now()
+            target  = self._next_run
+
+            if target is None:
+                break
+
+            wait_seconds = (target - now).total_seconds()
+
+            if wait_seconds > 0:
+                # Sleep in 30s chunks so we can respond to stop events
+                while wait_seconds > 0 and not self._schedule_stop.is_set():
+                    chunk = min(30, wait_seconds)
+                    self._schedule_stop.wait(chunk)
+                    wait_seconds -= chunk
+
+            if self._schedule_stop.is_set():
+                break
+
+            # Fire backup
+            self._plugin_log("Scheduled backup firing now.")
+            self._run_backup()
+
+            # Calculate next run
+            next_run = self._calc_next_run()
+            if next_run is None:
+                break
+            self._next_run = next_run
             self._plugin_log(
-                "Backup scheduled: type={} time={} next_run={}".format(
-                    schedule_type,
-                    self._settings.get(["schedule_time"]),
-                    nrt.strftime("%Y-%m-%d %H:%M:%S") if nrt else "unknown",
+                "Next scheduled backup: {}".format(
+                    next_run.strftime("%Y-%m-%d %H:%M:%S")
                 )
             )
-        except Exception:
-            self._plugin_log("Backup scheduled: type={}".format(schedule_type))
 
-    def _build_cron_trigger(self, schedule_type):
-        time_str = self._settings.get(["schedule_time"]) or "03:00"
+    def _calc_next_run(self):
+        """Calculate the next datetime this backup should run."""
+        schedule_type = self._settings.get(["schedule_type"])
+        time_str      = self._settings.get(["schedule_time"]) or "03:00"
+
         try:
             hour, minute = map(int, time_str.split(":"))
         except Exception:
             self._plugin_log(
-                "WARNING: Invalid schedule_time '{}', defaulting to 03:00".format(time_str)
+                "Invalid schedule_time '{}', defaulting to 03:00".format(time_str)
             )
             hour, minute = 3, 0
 
+        now = datetime.datetime.now()
+
         if schedule_type == "daily":
-            return CronTrigger(hour=hour, minute=minute)
+            candidate = now.replace(hour=hour, minute=minute, second=0, microsecond=0)
+            if candidate <= now:
+                candidate += datetime.timedelta(days=1)
+            return candidate
+
         elif schedule_type == "weekly":
-            _days = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"]
             dow = int(self._settings.get(["schedule_day_of_week"]) or 0)
-            return CronTrigger(day_of_week=_days[dow % 7], hour=hour, minute=minute)
+            # dow: 0=Mon … 6=Sun, matches Python weekday()
+            candidate = now.replace(hour=hour, minute=minute, second=0, microsecond=0)
+            days_ahead = (dow - now.weekday()) % 7
+            if days_ahead == 0 and candidate <= now:
+                days_ahead = 7
+            return candidate + datetime.timedelta(days=days_ahead)
+
         elif schedule_type == "monthly":
             dom = max(1, min(28, int(self._settings.get(["schedule_day_of_month"]) or 1)))
-            return CronTrigger(day=dom, hour=hour, minute=minute)
+            # Try this month first
+            try:
+                candidate = now.replace(
+                    day=dom, hour=hour, minute=minute, second=0, microsecond=0
+                )
+            except ValueError:
+                candidate = None
+
+            if candidate is None or candidate <= now:
+                # Move to next month
+                if now.month == 12:
+                    next_month = now.replace(year=now.year + 1, month=1)
+                else:
+                    next_month = now.replace(month=now.month + 1)
+                try:
+                    candidate = next_month.replace(
+                        day=dom, hour=hour, minute=minute, second=0, microsecond=0
+                    )
+                except ValueError:
+                    return None
+            return candidate
+
         return None
 
     # ── Path variable resolution ──────────────────────────────────────────────
@@ -985,7 +1012,7 @@ class NasBackupPlugin(
 __plugin_name__         = "NAS Backup"
 __plugin_identifier__   = "nasbackup"
 __plugin_pythoncompat__ = ">=3.7,<4"
-__plugin_version__      = "0.3.0"
+__plugin_version__      = "0.3.1"
 __plugin_description__  = (
     "Automated OctoPrint backups to a NAS - "
     "scheduled (daily/weekly/monthly), GFS retention, SMB or local path."
