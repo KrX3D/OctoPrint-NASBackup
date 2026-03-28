@@ -48,7 +48,6 @@ class NasBackupPlugin(
     octoprint.plugin.StartupPlugin,
     octoprint.plugin.ShutdownPlugin,
     octoprint.plugin.SimpleApiPlugin,
-    octoprint.plugin.SoftwareUpdatePlugin,
 ):
 
     # ──────────────────────────────────────────
