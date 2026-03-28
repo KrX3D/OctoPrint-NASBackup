@@ -7,9 +7,9 @@ plugin_package     = "octoprint_nasbackup"
 plugin_name        = "OctoPrint-NASBackup"
 plugin_version     = "0.1.0"
 plugin_description = "Automated OctoPrint backups to a NAS — scheduled, GFS retention, SMB or local path."
-plugin_author      = "Your Name"
-plugin_author_email = "your@email.com"
-plugin_url         = "https://github.com/yourusername/OctoPrint-NASBackup"
+plugin_author      = "KrX3D"
+plugin_author_email = ""
+plugin_url          = "https://github.com/KrX3D/OctoPrint-NASBackup"
 plugin_license     = "AGPLv3"
 plugin_requires    = []
 

@@ -962,9 +962,9 @@ __plugin_description__   = (
     "Automated OctoPrint backups to a NAS — "
     "scheduled (daily/weekly/monthly), GFS retention, SMB or local path."
 )
-__plugin_author__        = "Your Name"
-__plugin_url__           = "https://github.com/yourusername/OctoPrint-NASBackup"
-__plugin_license__       = "AGPLv3"
+__plugin_author__  = "KrX3D"
+__plugin_url__     = "https://github.com/KrX3D/OctoPrint-NASBackup"
+__plugin_license__ = "MIT"
 
 
 def __plugin_load__():
