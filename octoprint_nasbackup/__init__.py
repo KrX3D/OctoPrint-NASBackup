@@ -18,7 +18,6 @@ import re
 import shutil
 import socket
 import subprocess
-import sys
 import tempfile
 import threading
 import traceback
@@ -190,8 +189,6 @@ class NasBackupPlugin(
         )
 
     def on_api_command(self, command, data):
-        import flask
-
         if command == "trigger_backup":
             if self._backup_running:
                 return flask.jsonify({"success": False, "message": "A backup is already running."}), 409
@@ -210,8 +207,6 @@ class NasBackupPlugin(
         return flask.abort(400)
 
     def on_api_get(self, request):
-        import flask
-
         next_run = None
         if self._scheduler:
             try:
@@ -653,7 +648,6 @@ class NasBackupPlugin(
                         "    deltree failed (exit {}): {}".format(rc, err.strip()), "WARNING"
                     )
 
-        kept = 0  # just for logging
         self._log("  Retention applied.")
 
     def _gfs_calculate_deletions(self, snapshot_names):
@@ -763,11 +757,13 @@ class NasBackupPlugin(
                     cf.write("domain={}\n".format(domain))
 
             version = self._settings.get(["smb_version"]) or "3.0"
+            # smbclient -m accepts only "SMB2" or "SMB3", not "SMB30" etc.
+            smb_proto = "SMB3" if version.startswith("3") else "SMB2"
             cmd = [
                 "smbclient", unc,
                 "-A", cred_file,
                 "--option=client min protocol=SMB2",
-                "-m", "SMB{}".format(version.replace(".", "")),
+                "-m", smb_proto,
                 "-c", command,
             ]
             result = subprocess.run(
@@ -956,15 +952,16 @@ class NasBackupPlugin(
 # ─────────────────────────────────────────────────────────────────────────────
 
 __plugin_name__          = "NAS Backup"
+__plugin_identifier__    = "nasbackup"
 __plugin_pythoncompat__  = ">=3.7,<4"
 __plugin_version__       = "0.1.0"
 __plugin_description__   = (
     "Automated OctoPrint backups to a NAS — "
     "scheduled (daily/weekly/monthly), GFS retention, SMB or local path."
 )
-__plugin_author__  = "KrX3D"
-__plugin_url__     = "https://github.com/KrX3D/OctoPrint-NASBackup"
-__plugin_license__ = "MIT"
+__plugin_author__        = "KrX3D"
+__plugin_url__           = "https://github.com/KrX3D/OctoPrint-NASBackup"
+__plugin_license__       = "MIT"
 
 
 def __plugin_load__():

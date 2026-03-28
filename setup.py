@@ -10,7 +10,7 @@ plugin_description = "Automated OctoPrint backups to a NAS — scheduled, GFS re
 plugin_author      = "KrX3D"
 plugin_author_email = ""
 plugin_url          = "https://github.com/KrX3D/OctoPrint-NASBackup"
-plugin_license     = "AGPLv3"
+plugin_license     = "MIT"
 plugin_requires    = []
 
 ########################################################################################################################

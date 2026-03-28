@@ -22,14 +22,14 @@ Automated OctoPrint backups to a NAS with scheduling, configurable GFS retention
 Install via OctoPrint's Plugin Manager using this URL:
 
 ```
-https://github.com/yourusername/OctoPrint-NASBackup/archive/main.zip
+https://github.com/KrX3D/OctoPrint-NASBackup/archive/main.zip
 ```
 
 Or clone and install manually:
 
 ```bash
 cd ~/
-git clone https://github.com/yourusername/OctoPrint-NASBackup.git
+git clone https://github.com/KrX3D/OctoPrint-NASBackup.git
 ~/oprint/bin/pip install -e OctoPrint-NASBackup
 ```
 
