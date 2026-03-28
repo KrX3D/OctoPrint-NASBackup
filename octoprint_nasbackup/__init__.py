@@ -48,6 +48,7 @@ class NasBackupPlugin(
     octoprint.plugin.StartupPlugin,
     octoprint.plugin.ShutdownPlugin,
     octoprint.plugin.SimpleApiPlugin,
+    octoprint.plugin.SoftwareUpdatePlugin,
 ):
 
     # ──────────────────────────────────────────
@@ -149,6 +150,23 @@ class NasBackupPlugin(
         return dict(
             js=["js/nasbackup.js"],
             css=["css/nasbackup.css"],
+        )
+
+    # ──────────────────────────────────────────
+    # SoftwareUpdatePlugin
+    # ──────────────────────────────────────────
+
+    def get_update_information(self):
+        return dict(
+            nasbackup=dict(
+                displayName=__plugin_name__,
+                displayVersion=self._plugin_version,
+                type="github_release",
+                user="KrX3D",
+                repo="OctoPrint-NASBackup",
+                current=self._plugin_version,
+                pip="https://github.com/KrX3D/OctoPrint-NASBackup/archive/{target}.zip",
+            )
         )
 
     # ──────────────────────────────────────────
@@ -954,7 +972,7 @@ class NasBackupPlugin(
 __plugin_name__          = "NAS Backup"
 __plugin_identifier__    = "nasbackup"
 __plugin_pythoncompat__  = ">=3.7,<4"
-__plugin_version__       = "0.1.0"
+__plugin_version__       = "0.2.0"
 __plugin_description__   = (
     "Automated OctoPrint backups to a NAS — "
     "scheduled (daily/weekly/monthly), GFS retention, SMB or local path."
@@ -969,4 +987,6 @@ def __plugin_load__():
     __plugin_implementation__ = NasBackupPlugin()
 
     global __plugin_hooks__
-    __plugin_hooks__ = {}
+    __plugin_hooks__ = {
+        "octoprint.plugin.softwareupdate.check_config": __plugin_implementation__.get_update_information,
+    }
