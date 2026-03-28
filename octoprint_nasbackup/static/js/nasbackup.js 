@@ -1,7 +1,6 @@
 /*
  * OctoPrint-NASBackup — nasbackup.js
  */
-
 $(function () {
 
     function NasBackupViewModel(parameters) {
@@ -10,10 +9,7 @@ $(function () {
         self.settingsViewModel   = parameters[0];
         self.loginStateViewModel = parameters[1];
 
-        // Plugin settings reference — set in onBeforeBinding
-        self.settings = null;
-
-        // Runtime state
+        // Runtime observables — all safe defaults, no null
         self.backupRunning  = ko.observable(false);
         self.startupPending = ko.observable(false);
         self.nextRun        = ko.observable(null);
@@ -23,43 +19,37 @@ $(function () {
         self.logs           = ko.observableArray([]);
         self.statusPolling  = null;
 
-        // UI state
         self.triggerBusy = ko.observable(false);
         self.testBusy    = ko.observable(false);
-        self.testResult  = ko.observable(null);
+        self.testResult  = ko.observable(null);   // null = not run yet
 
-        // Computed
+        // Computed helpers
         self.statusClass = ko.computed(function () {
             return "nasbackup-status-" + (self.lastStatus().status || "never");
         });
-
         self.statusLabel = ko.computed(function () {
             var map = {
-                success: "Success",
-                failed:  "Failed",
-                running: "Running...",
-                skipped: "Skipped",
-                never:   "Never run"
+                success: "Success", failed: "Failed",
+                running: "Running...", skipped: "Skipped", never: "Never run"
             };
-            var s = self.lastStatus().status;
-            return map[s] || s;
+            return map[self.lastStatus().status] || (self.lastStatus().status || "never");
         });
 
-        // ── Lifecycle ─────────────────────────────────────────────────
+        // settings is populated by onBeforeBinding before any DOM binding happens
+        // We use a plain property — KO only evaluates template bindings AFTER this runs
+        self.settings = null;
 
         self.onBeforeBinding = function () {
             self.settings = self.settingsViewModel.settings.plugins.nasbackup;
         };
 
         self.onSettingsShown = function () {
-            // Reset transient UI state so nothing appears stale
+            // Always reset test UI state when tab opens
             self.testBusy(false);
             self.testResult(null);
             self.triggerBusy(false);
-
             self.refreshStatus();
 
-            // Only poll while a backup is actually running
             self.statusPolling = setInterval(function () {
                 if (self.backupRunning() || self.startupPending()) {
                     self.refreshStatus();
@@ -90,10 +80,8 @@ $(function () {
                         var el = document.getElementById("nasbackup_log_area");
                         if (el) { el.scrollTop = el.scrollHeight; }
                     }
-                })
-                .fail(function () {
-                    // API not yet ready — ignore silently
                 });
+            // intentionally no .fail() — if API is down we just keep old state
         };
 
         self.triggerBackup = function () {
@@ -103,27 +91,23 @@ $(function () {
                 .done(function (data) {
                     if (data.success) {
                         new PNotify({
-                            title: "NAS Backup",
-                            text:  "Backup started.",
-                            type:  "success",
-                            hide:  true
+                            title: "NAS Backup", text: "Backup started.",
+                            type: "success", hide: true
                         });
                         self.backupRunning(true);
-                        self.refreshStatus();
+                        setTimeout(self.refreshStatus, 1000);
                     } else {
                         new PNotify({
                             title: "NAS Backup",
-                            text:  data.message || "Could not start backup.",
-                            type:  "error"
+                            text: data.message || "Could not start backup.",
+                            type: "error"
                         });
                     }
                 })
                 .fail(function () {
                     new PNotify({title: "NAS Backup", text: "Request failed.", type: "error"});
                 })
-                .always(function () {
-                    self.triggerBusy(false);
-                });
+                .always(function () { self.triggerBusy(false); });
         };
 
         self.testConnection = function () {
@@ -131,18 +115,11 @@ $(function () {
             self.testBusy(true);
             self.testResult(null);
             OctoPrint.simpleApiCommand("nasbackup", "test_connection", {})
-                .done(function (data) {
-                    self.testResult(data);
-                })
+                .done(function (data) { self.testResult(data); })
                 .fail(function () {
-                    self.testResult({
-                        success: false,
-                        message: "Request to OctoPrint failed."
-                    });
+                    self.testResult({success: false, message: "Request to OctoPrint failed."});
                 })
-                .always(function () {
-                    self.testBusy(false);
-                });
+                .always(function () { self.testBusy(false); });
         };
 
         self.clearLogs = function () {
@@ -163,5 +140,4 @@ $(function () {
         dependencies: ["settingsViewModel", "loginStateViewModel"],
         elements:     ["#settings_plugin_nasbackup"]
     });
-
 });

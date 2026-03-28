@@ -5,10 +5,11 @@
     <div class="nasbackup-master-toggle">
         <input type="checkbox" id="nasbackup_enabled" data-bind="checked: settings.enabled">
         <label for="nasbackup_enabled">Enable NAS Backup Plugin</label>
-        <span class="muted" style="font-size:11px; font-weight:normal;"
-              data-bind="visible: !settings.enabled()">
+        <!-- ko if: !settings.enabled() -->
+        <span class="muted" style="font-size:11px; font-weight:normal;">
             (plugin is disabled — no scheduled backups will run)
         </span>
+        <!-- /ko -->
     </div>
 
     <ul class="nav nav-tabs" id="nasbackup_tabs">
@@ -38,19 +39,19 @@
                 </div>
             </div>
 
-            <div class="control-group"
-                 data-bind="visible: settings.schedule_type() !== 'disabled'">
+            <!-- ko if: settings.schedule_type() !== 'disabled' -->
+            <div class="control-group">
                 <label class="control-label">Time</label>
                 <div class="controls">
                     <input type="time" style="width:110px;"
-                           data-bind="value: settings.schedule_time"
-                           placeholder="03:00">
+                           data-bind="value: settings.schedule_time" placeholder="03:00">
                     <span class="help-inline muted">HH:MM — device local timezone</span>
                 </div>
             </div>
+            <!-- /ko -->
 
-            <div class="control-group"
-                 data-bind="visible: settings.schedule_type() === 'weekly'">
+            <!-- ko if: settings.schedule_type() === 'weekly' -->
+            <div class="control-group">
                 <label class="control-label">Day of week</label>
                 <div class="controls">
                     <select data-bind="value: settings.schedule_day_of_week">
@@ -64,9 +65,10 @@
                     </select>
                 </div>
             </div>
+            <!-- /ko -->
 
-            <div class="control-group"
-                 data-bind="visible: settings.schedule_type() === 'monthly'">
+            <!-- ko if: settings.schedule_type() === 'monthly' -->
+            <div class="control-group">
                 <label class="control-label">Day of month</label>
                 <div class="controls">
                     <input type="number" min="1" max="28" style="width:70px;"
@@ -74,12 +76,14 @@
                     <span class="help-inline muted">1-28</span>
                 </div>
             </div>
+            <!-- /ko -->
 
             <div class="control-group">
                 <div class="controls">
                     <label class="checkbox">
                         <input type="checkbox" data-bind="checked: settings.only_when_idle">
-                        Only run when printer is <strong>idle</strong> (skip if printing or paused)
+                        Only run when printer is <strong>idle</strong>
+                        (skip if printing or paused)
                     </label>
                 </div>
             </div>
@@ -96,16 +100,18 @@
                 </div>
             </div>
 
-            <div class="control-group" data-bind="visible: settings.backup_on_startup">
+            <!-- ko if: settings.backup_on_startup() -->
+            <div class="control-group">
                 <label class="control-label">Delay (seconds)</label>
                 <div class="controls">
                     <input type="number" min="10" max="3600" style="width:80px;"
                            data-bind="value: settings.startup_delay">
                     <span class="help-inline muted">
-                        Wait this many seconds after startup before running. Default: 120
+                        Seconds to wait after OctoPrint starts before running. Default: 120
                     </span>
                 </div>
             </div>
+            <!-- /ko -->
         </div>
 
         <div class="tab-pane" id="nasbackup_tab_nas">
@@ -121,23 +127,24 @@
                 </div>
             </div>
 
-            <div data-bind="visible: settings.transfer_mode() === 'local'">
-                <div class="control-group">
-                    <label class="control-label">Local backup path</label>
-                    <div class="controls">
-                        <input type="text" class="input-block-level"
-                               data-bind="value: settings.local_path"
-                               placeholder="/mnt/octoprint_backup">
-                        <span class="help-block muted">
-                            Must be mounted and writable. Supports <code>{hostname}</code>,
-                            e.g. <code>/mnt/backup/{hostname}</code>
-                        </span>
-                    </div>
+            <!-- ko if: settings.transfer_mode() === 'local' -->
+            <div class="control-group">
+                <label class="control-label">Local backup path</label>
+                <div class="controls">
+                    <input type="text" class="input-block-level"
+                           data-bind="value: settings.local_path"
+                           placeholder="/mnt/octoprint_backup">
+                    <span class="help-block muted">
+                        Must be mounted and writable. Supports <code>{hostname}</code> variable,
+                        e.g. <code>/mnt/backup/{hostname}</code>
+                    </span>
                 </div>
             </div>
+            <!-- /ko -->
 
-            <div data-bind="visible: settings.transfer_mode() === 'smbclient'">
-                <p class="nasbackup-section-heading" style="margin-top:12px;">SMB Credentials</p>
+            <!-- ko if: settings.transfer_mode() === 'smbclient' -->
+            <div>
+                <p class="nasbackup-section-heading" style="margin-top:4px;">SMB Credentials</p>
 
                 <div class="control-group">
                     <label class="control-label">Host / IP</label>
@@ -164,11 +171,11 @@
                                data-bind="value: settings.smb_subdir"
                                placeholder="OctoPrint">
                         <span class="help-block muted">
-                            Path inside the share. Supports sub-folders with <code>/</code>
-                            and the <code>{hostname}</code> variable.<br>
-                            Examples: <code>RaspberryPi/Backup</code> &nbsp;|&nbsp;
+                            Path inside the share. Use <code>/</code> for sub-folders and
+                            <code>{hostname}</code> as a variable.<br>
+                            Examples: <code>RaspberryPi/Backup</code> |
                             <code>Printers/{hostname}</code><br>
-                            Result: <code>\\host\share\subdir\server_name\snapshots\...</code>
+                            Result: <code>\\host\share\subdir\server_name\snapshots\</code>
                         </span>
                     </div>
                 </div>
@@ -210,6 +217,7 @@
                     </div>
                 </div>
             </div>
+            <!-- /ko -->
 
             <hr style="margin:14px 0 10px;">
             <p class="nasbackup-section-heading">Connection Test</p>
@@ -217,24 +225,28 @@
                 <div class="controls">
                     <button class="btn btn-small"
                             data-bind="click: testConnection, enable: !testBusy()">
-                        <i class="fas fa-plug"></i>
-                        <span data-bind="visible: !testBusy()">Test Connection</span>
-                        <span data-bind="visible: testBusy()">
-                            <i class="fas fa-spinner fa-spin"></i> Testing...
-                        </span>
+                        <!-- ko ifnot: testBusy -->
+                        <i class="fas fa-plug"></i> Test Connection
+                        <!-- /ko -->
+                        <!-- ko if: testBusy -->
+                        <i class="fas fa-spinner fa-spin"></i> Testing...
+                        <!-- /ko -->
                     </button>
 
-                    <div class="nasbackup-test-result"
-                         data-bind="visible: testResult() !== null,
-                                    css: testResult() && testResult().success ? 'ok' : 'err'">
-                        <span data-bind="visible: testResult() && testResult().success">
-                            <i class="fas fa-check-circle"></i>
-                        </span>
-                        <span data-bind="visible: testResult() && !testResult().success">
-                            <i class="fas fa-times-circle"></i>
-                        </span>
-                        <span data-bind="text: testResult() ? testResult().message : ''"></span>
+                    <!-- ko if: testResult() !== null -->
+                    <!-- ko if: testResult().success -->
+                    <div class="nasbackup-test-result ok" style="margin-top:8px;">
+                        <i class="fas fa-check-circle"></i>
+                        <span data-bind="text: testResult().message"></span>
                     </div>
+                    <!-- /ko -->
+                    <!-- ko ifnot: testResult().success -->
+                    <div class="nasbackup-test-result err" style="margin-top:8px;">
+                        <i class="fas fa-times-circle"></i>
+                        <span data-bind="text: testResult().message"></span>
+                    </div>
+                    <!-- /ko -->
+                    <!-- /ko -->
                 </div>
             </div>
         </div>
@@ -269,20 +281,21 @@
             <hr style="margin:14px 0 10px;">
             <p class="nasbackup-section-heading">Server / Printer Name</p>
             <p class="muted" style="font-size:11px; margin-bottom:10px;">
-                Used as a sub-folder name on the NAS to separate multiple printers.
+                Used as a folder name on the NAS to separate multiple printers.
             </p>
 
             <div class="control-group">
                 <div class="controls">
                     <label class="radio">
-                        <input type="radio" name="nasbackup_server_name_mode" value="true"
+                        <input type="radio" name="nasbackup_snm" value="true"
                                data-bind="checked: settings.server_name_auto">
                         Auto-detect from OctoPrint appearance name (falls back to hostname)
                     </label>
-                    <label class="radio" style="display:flex; align-items:center; gap:8px;">
-                        <input type="radio" name="nasbackup_server_name_mode" value="false"
+                    <label class="radio"
+                           style="display:flex; align-items:center; gap:8px; margin-top:6px;">
+                        <input type="radio" name="nasbackup_snm" value="false"
                                data-bind="checked: settings.server_name_auto">
-                        <span>Manual:</span>
+                        <span style="white-space:nowrap;">Manual:</span>
                         <input type="text" style="width:160px; margin:0;"
                                data-bind="value: settings.server_name_manual,
                                           enable: settings.server_name_auto() === 'false' || settings.server_name_auto() === false"
@@ -308,27 +321,28 @@
             <div class="control-group">
                 <div class="controls">
                     <label class="checkbox">
-                        <input type="checkbox" data-bind="checked: settings.system_backup_enabled">
+                        <input type="checkbox"
+                               data-bind="checked: settings.system_backup_enabled">
                         <strong>Enable system files backup</strong>
                     </label>
                 </div>
             </div>
 
-            <div data-bind="visible: settings.system_backup_enabled">
-                <div class="control-group">
-                    <label class="control-label">Paths to back up</label>
-                    <div class="controls">
-                        <textarea rows="10" class="input-block-level"
-                                  data-bind="value: settings.system_backup_items"
-                                  style="font-family:monospace; font-size:12px;"></textarea>
-                        <span class="help-block muted">
-                            One path per line. Files and directories supported.
-                            SMB mode packs them into <code>system_backup.tar.gz</code>.
-                            Local mode copies them preserving structure.
-                        </span>
-                    </div>
+            <!-- ko if: settings.system_backup_enabled() -->
+            <div class="control-group">
+                <label class="control-label">Paths to back up</label>
+                <div class="controls">
+                    <textarea rows="10" class="input-block-level"
+                              data-bind="value: settings.system_backup_items"
+                              style="font-family:monospace; font-size:12px;"></textarea>
+                    <span class="help-block muted">
+                        One path per line. Files and directories supported.<br>
+                        SMB mode: packed into <code>system_backup.tar.gz</code>.<br>
+                        Local mode: copied preserving directory structure.
+                    </span>
                 </div>
             </div>
+            <!-- /ko -->
         </div>
 
         <div class="tab-pane" id="nasbackup_tab_retention">
@@ -343,60 +357,64 @@
                 </div>
             </div>
 
-            <div data-bind="visible: settings.retention_enabled">
-                <table class="table table-condensed" style="width:auto; margin-top:10px;">
-                    <thead>
-                        <tr>
-                            <th>Category</th>
-                            <th style="text-align:center;">Keep</th>
-                            <th style="padding-left:12px;">Description</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td><strong>Daily</strong></td>
-                            <td style="text-align:center;">
-                                <input type="number" min="0" max="365" style="width:65px;"
-                                       data-bind="value: settings.keep_daily">
-                            </td>
-                            <td style="padding-left:12px; color:#666;">One per day for N days</td>
-                        </tr>
-                        <tr>
-                            <td><strong>Weekly</strong></td>
-                            <td style="text-align:center;">
-                                <input type="number" min="0" max="104" style="width:65px;"
-                                       data-bind="value: settings.keep_weekly">
-                            </td>
-                            <td style="padding-left:12px; color:#666;">One per week for N weeks</td>
-                        </tr>
-                        <tr>
-                            <td><strong>Monthly</strong></td>
-                            <td style="text-align:center;">
-                                <input type="number" min="0" max="120" style="width:65px;"
-                                       data-bind="value: settings.keep_monthly">
-                            </td>
-                            <td style="padding-left:12px; color:#666;">One per month for N months</td>
-                        </tr>
-                        <tr>
-                            <td><strong>Yearly</strong></td>
-                            <td style="text-align:center;">
-                                <input type="number" min="0" max="50" style="width:65px;"
-                                       data-bind="value: settings.keep_yearly">
-                            </td>
-                            <td style="padding-left:12px; color:#666;">One per year for N years</td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
+            <!-- ko if: settings.retention_enabled() -->
+            <table class="table table-condensed" style="width:auto; margin-top:10px;">
+                <thead>
+                    <tr>
+                        <th>Category</th>
+                        <th style="text-align:center;">Keep</th>
+                        <th style="padding-left:12px;">Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Daily</strong></td>
+                        <td style="text-align:center;">
+                            <input type="number" min="0" max="365" style="width:65px;"
+                                   data-bind="value: settings.keep_daily">
+                        </td>
+                        <td style="padding-left:12px; color:#666;">One per day for N days</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Weekly</strong></td>
+                        <td style="text-align:center;">
+                            <input type="number" min="0" max="104" style="width:65px;"
+                                   data-bind="value: settings.keep_weekly">
+                        </td>
+                        <td style="padding-left:12px; color:#666;">One per week for N weeks</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Monthly</strong></td>
+                        <td style="text-align:center;">
+                            <input type="number" min="0" max="120" style="width:65px;"
+                                   data-bind="value: settings.keep_monthly">
+                        </td>
+                        <td style="padding-left:12px; color:#666;">One per month for N months</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Yearly</strong></td>
+                        <td style="text-align:center;">
+                            <input type="number" min="0" max="50" style="width:65px;"
+                                   data-bind="value: settings.keep_yearly">
+                        </td>
+                        <td style="padding-left:12px; color:#666;">One per year for N years</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p class="muted" style="font-size:11px; margin-top:4px;">
+                Evaluated newest-first. The first snapshot in each time window is kept;
+                everything else is deleted.
+            </p>
+            <!-- /ko -->
         </div>
 
         <div class="tab-pane" id="nasbackup_tab_status">
             <p class="nasbackup-section-heading">Current Status</p>
 
-            <table class="table table-condensed" style="width:auto; margin-bottom:10px;">
+            <table class="table table-condensed" style="width:auto; margin-bottom:12px;">
                 <tbody>
                     <tr>
-                        <td><strong>Status</strong></td>
+                        <td style="padding-right:16px;"><strong>Status</strong></td>
                         <td>
                             <span class="nasbackup-status-badge"
                                   data-bind="text: statusLabel, css: statusClass"></span>
@@ -409,18 +427,27 @@
                     <tr>
                         <td><strong>Last run</strong></td>
                         <td>
-                            <span data-bind="visible: lastStatus().time, text: lastStatus().time"></span>
-                            <span class="muted" data-bind="visible: !lastStatus().time">-</span>
+                            <!-- ko if: lastStatus().time -->
+                            <span data-bind="text: lastStatus().time"></span>
+                            <!-- /ko -->
+                            <!-- ko ifnot: lastStatus().time -->
+                            <span class="muted">-</span>
+                            <!-- /ko -->
                         </td>
                     </tr>
                     <tr>
                         <td><strong>Next scheduled</strong></td>
                         <td>
-                            <span data-bind="visible: nextRun, text: nextRun"></span>
-                            <span class="muted" data-bind="visible: !nextRun">Not scheduled</span>
+                            <!-- ko if: nextRun -->
+                            <span data-bind="text: nextRun"></span>
+                            <!-- /ko -->
+                            <!-- ko ifnot: nextRun -->
+                            <span class="muted">Not scheduled</span>
+                            <!-- /ko -->
                         </td>
                     </tr>
-                    <tr data-bind="visible: startupPending">
+                    <!-- ko if: startupPending -->
+                    <tr>
                         <td><strong>Startup backup</strong></td>
                         <td>
                             <span class="nasbackup-status-badge nasbackup-status-running">
@@ -428,20 +455,23 @@
                             </span>
                         </td>
                     </tr>
+                    <!-- /ko -->
                 </tbody>
             </table>
 
             <div style="margin-bottom:14px;">
+                <!-- ko ifnot: backupRunning -->
                 <button class="btn btn-primary btn-small"
                         data-bind="click: triggerBackup,
-                                   enable: !triggerBusy() && !backupRunning() && settings.enabled(),
-                                   visible: !backupRunning()">
+                                   enable: !triggerBusy() && settings.enabled()">
                     <i class="fas fa-play"></i> Run Backup Now
                 </button>
-                <button class="btn btn-primary btn-small" disabled="disabled"
-                        data-bind="visible: backupRunning()">
+                <!-- /ko -->
+                <!-- ko if: backupRunning -->
+                <button class="btn btn-primary btn-small" disabled="disabled">
                     <i class="fas fa-spinner fa-spin"></i> Backup running...
                 </button>
+                <!-- /ko -->
                 &nbsp;
                 <button class="btn btn-small" data-bind="click: refreshStatus">
                     <i class="fas fa-sync-alt"></i> Refresh
@@ -454,16 +484,17 @@
 
             <p class="nasbackup-section-heading">Backup Log</p>
 
-            <div data-bind="visible: logs().length > 0">
-                <div id="nasbackup_log_area" class="nasbackup-log"
-                     data-bind="foreach: logs">
-                    <div data-bind="text: $data, css: $parent.logLineClass($data)"></div>
-                </div>
+            <!-- ko if: logs().length > 0 -->
+            <div id="nasbackup_log_area" class="nasbackup-log"
+                 data-bind="foreach: logs">
+                <div data-bind="text: $data, css: $parent.logLineClass($data)"></div>
             </div>
-            <p class="muted" style="font-size:12px; margin-top:6px;"
-               data-bind="visible: logs().length === 0">
-                No log entries yet. Run a backup or wait for the next scheduled run.
+            <!-- /ko -->
+            <!-- ko if: logs().length === 0 -->
+            <p class="muted" style="font-size:12px; margin-top:4px;">
+                No log entries yet. Run a backup or wait for the scheduled run.
             </p>
+            <!-- /ko -->
         </div>
 
     </div>

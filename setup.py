@@ -2,16 +2,16 @@
 # OctoPrint-NASBackup setup.py
 ########################################################################################################################
 
-plugin_identifier  = "nasbackup"
-plugin_package     = "octoprint_nasbackup"
-plugin_name        = "OctoPrint-NASBackup"
-plugin_version     = "0.3.0"
-plugin_description = "Automated OctoPrint backups to a NAS — scheduled, GFS retention, SMB or local path."
-plugin_author      = "KrX3D"
+plugin_identifier   = "nasbackup"
+plugin_package      = "octoprint_nasbackup"
+plugin_name         = "OctoPrint-NASBackup"
+plugin_version      = "0.3.0"
+plugin_description  = "Automated OctoPrint backups to a NAS — scheduled, GFS retention, SMB or local path."
+plugin_author       = "KrX3D"
 plugin_author_email = ""
-plugin_url         = "https://github.com/KrX3D/OctoPrint-NASBackup"
-plugin_license     = "MIT"
-plugin_requires    = []
+plugin_url          = "https://github.com/KrX3D/OctoPrint-NASBackup"
+plugin_license      = "MIT"
+plugin_requires     = []
 
 ########################################################################################################################
 
@@ -28,16 +28,16 @@ except ImportError:
     sys.exit(-1)
 
 setup_parameters = octoprint_setuptools.create_plugin_setup_parameters(
-    identifier     = plugin_identifier,
-    package        = plugin_package,
-    name           = plugin_name,
-    version        = plugin_version,
-    description    = plugin_description,
-    author         = plugin_author,
-    mail           = plugin_author_email,
-    url            = plugin_url,
-    license        = plugin_license,
-    requires       = plugin_requires,
+    identifier  = plugin_identifier,
+    package     = plugin_package,
+    name        = plugin_name,
+    version     = plugin_version,
+    description = plugin_description,
+    author      = plugin_author,
+    mail        = plugin_author_email,
+    url         = plugin_url,
+    license     = plugin_license,
+    requires    = plugin_requires,
 )
 
 if __name__ == "__main__":
