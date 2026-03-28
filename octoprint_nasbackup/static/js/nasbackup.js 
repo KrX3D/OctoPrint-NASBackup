@@ -9,7 +9,7 @@ $(function () {
         self.settingsViewModel   = parameters[0];
         self.loginStateViewModel = parameters[1];
 
-        // Runtime observables — all safe defaults, no null
+        // Runtime observables — all safe defaults
         self.backupRunning  = ko.observable(false);
         self.startupPending = ko.observable(false);
         self.nextRun        = ko.observable(null);
@@ -21,12 +21,59 @@ $(function () {
 
         self.triggerBusy = ko.observable(false);
         self.testBusy    = ko.observable(false);
-        self.testResult  = ko.observable(null);   // null = not run yet
+        self.testResult  = ko.observable(null);
 
-        // Computed helpers
+        // settings is set in onBeforeBinding — null until then.
+        // NEVER call settings.xxx() directly in data-bind attributes.
+        // Use the safe computed helpers below instead.
+        self.settings = null;
+
+        // ── Safe computed helpers ─────────────────────────────────────
+        // These return a safe default if settings is not yet loaded.
+
+        self.isEnabled = ko.computed(function () {
+            try { return self.settings && self.settings.enabled(); }
+            catch (e) { return false; }
+        });
+
+        self.scheduleType = ko.computed(function () {
+            try { return self.settings && self.settings.schedule_type(); }
+            catch (e) { return "disabled"; }
+        });
+
+        self.transferMode = ko.computed(function () {
+            try { return self.settings && self.settings.transfer_mode(); }
+            catch (e) { return "local"; }
+        });
+
+        self.backupOnStartup = ko.computed(function () {
+            try { return self.settings && self.settings.backup_on_startup(); }
+            catch (e) { return false; }
+        });
+
+        self.systemBackupEnabled = ko.computed(function () {
+            try { return self.settings && self.settings.system_backup_enabled(); }
+            catch (e) { return false; }
+        });
+
+        self.retentionEnabled = ko.computed(function () {
+            try { return self.settings && self.settings.retention_enabled(); }
+            catch (e) { return false; }
+        });
+
+        self.serverNameAuto = ko.computed(function () {
+            try {
+                var v = self.settings && self.settings.server_name_auto();
+                return v === true || v === "true";
+            }
+            catch (e) { return true; }
+        });
+
+        // ── Computed for status display ───────────────────────────────
         self.statusClass = ko.computed(function () {
             return "nasbackup-status-" + (self.lastStatus().status || "never");
         });
+
         self.statusLabel = ko.computed(function () {
             var map = {
                 success: "Success", failed: "Failed",
@@ -35,16 +82,13 @@ $(function () {
             return map[self.lastStatus().status] || (self.lastStatus().status || "never");
         });
 
-        // settings is populated by onBeforeBinding before any DOM binding happens
-        // We use a plain property — KO only evaluates template bindings AFTER this runs
-        self.settings = null;
+        // ── Lifecycle ─────────────────────────────────────────────────
 
         self.onBeforeBinding = function () {
             self.settings = self.settingsViewModel.settings.plugins.nasbackup;
         };
 
         self.onSettingsShown = function () {
-            // Always reset test UI state when tab opens
             self.testBusy(false);
             self.testResult(null);
             self.triggerBusy(false);
@@ -81,7 +125,6 @@ $(function () {
                         if (el) { el.scrollTop = el.scrollHeight; }
                     }
                 });
-            // intentionally no .fail() — if API is down we just keep old state
         };
 
         self.triggerBackup = function () {
@@ -117,7 +160,10 @@ $(function () {
             OctoPrint.simpleApiCommand("nasbackup", "test_connection", {})
                 .done(function (data) { self.testResult(data); })
                 .fail(function () {
-                    self.testResult({success: false, message: "Request to OctoPrint failed."});
+                    self.testResult({
+                        success: false,
+                        message: "Request to OctoPrint failed."
+                    });
                 })
                 .always(function () { self.testBusy(false); });
         };

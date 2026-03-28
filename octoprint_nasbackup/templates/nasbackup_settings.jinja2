@@ -3,9 +3,10 @@
 <div id="settings_plugin_nasbackup">
 
     <div class="nasbackup-master-toggle">
-        <input type="checkbox" id="nasbackup_enabled" data-bind="checked: settings.enabled">
+        <input type="checkbox" id="nasbackup_enabled"
+               data-bind="checked: settings.enabled">
         <label for="nasbackup_enabled">Enable NAS Backup Plugin</label>
-        <!-- ko if: !settings.enabled() -->
+        <!-- ko if: !isEnabled() -->
         <span class="muted" style="font-size:11px; font-weight:normal;">
             (plugin is disabled — no scheduled backups will run)
         </span>
@@ -39,18 +40,19 @@
                 </div>
             </div>
 
-            <!-- ko if: settings.schedule_type() !== 'disabled' -->
+            <!-- ko if: scheduleType() !== 'disabled' -->
             <div class="control-group">
                 <label class="control-label">Time</label>
                 <div class="controls">
                     <input type="time" style="width:110px;"
-                           data-bind="value: settings.schedule_time" placeholder="03:00">
+                           data-bind="value: settings.schedule_time"
+                           placeholder="03:00">
                     <span class="help-inline muted">HH:MM — device local timezone</span>
                 </div>
             </div>
             <!-- /ko -->
 
-            <!-- ko if: settings.schedule_type() === 'weekly' -->
+            <!-- ko if: scheduleType() === 'weekly' -->
             <div class="control-group">
                 <label class="control-label">Day of week</label>
                 <div class="controls">
@@ -67,7 +69,7 @@
             </div>
             <!-- /ko -->
 
-            <!-- ko if: settings.schedule_type() === 'monthly' -->
+            <!-- ko if: scheduleType() === 'monthly' -->
             <div class="control-group">
                 <label class="control-label">Day of month</label>
                 <div class="controls">
@@ -81,7 +83,8 @@
             <div class="control-group">
                 <div class="controls">
                     <label class="checkbox">
-                        <input type="checkbox" data-bind="checked: settings.only_when_idle">
+                        <input type="checkbox"
+                               data-bind="checked: settings.only_when_idle">
                         Only run when printer is <strong>idle</strong>
                         (skip if printing or paused)
                     </label>
@@ -94,20 +97,21 @@
             <div class="control-group">
                 <div class="controls">
                     <label class="checkbox">
-                        <input type="checkbox" data-bind="checked: settings.backup_on_startup">
+                        <input type="checkbox"
+                               data-bind="checked: settings.backup_on_startup">
                         Run a backup automatically after OctoPrint starts
                     </label>
                 </div>
             </div>
 
-            <!-- ko if: settings.backup_on_startup() -->
+            <!-- ko if: backupOnStartup() -->
             <div class="control-group">
                 <label class="control-label">Delay (seconds)</label>
                 <div class="controls">
                     <input type="number" min="10" max="3600" style="width:80px;"
                            data-bind="value: settings.startup_delay">
                     <span class="help-inline muted">
-                        Seconds to wait after OctoPrint starts before running. Default: 120
+                        Seconds to wait after OctoPrint starts. Default: 120
                     </span>
                 </div>
             </div>
@@ -127,7 +131,7 @@
                 </div>
             </div>
 
-            <!-- ko if: settings.transfer_mode() === 'local' -->
+            <!-- ko if: transferMode() === 'local' -->
             <div class="control-group">
                 <label class="control-label">Local backup path</label>
                 <div class="controls">
@@ -135,14 +139,14 @@
                            data-bind="value: settings.local_path"
                            placeholder="/mnt/octoprint_backup">
                     <span class="help-block muted">
-                        Must be mounted and writable. Supports <code>{hostname}</code> variable,
-                        e.g. <code>/mnt/backup/{hostname}</code>
+                        Must be mounted and writable. Supports
+                        <code>{hostname}</code> variable.
                     </span>
                 </div>
             </div>
             <!-- /ko -->
 
-            <!-- ko if: settings.transfer_mode() === 'smbclient' -->
+            <!-- ko if: transferMode() === 'smbclient' -->
             <div>
                 <p class="nasbackup-section-heading" style="margin-top:4px;">SMB Credentials</p>
 
@@ -171,8 +175,8 @@
                                data-bind="value: settings.smb_subdir"
                                placeholder="OctoPrint">
                         <span class="help-block muted">
-                            Path inside the share. Use <code>/</code> for sub-folders and
-                            <code>{hostname}</code> as a variable.<br>
+                            Path inside the share. Supports <code>/</code> sub-folders
+                            and the <code>{hostname}</code> variable.<br>
                             Examples: <code>RaspberryPi/Backup</code> |
                             <code>Printers/{hostname}</code><br>
                             Result: <code>\\host\share\subdir\server_name\snapshots\</code>
@@ -191,13 +195,16 @@
                 <div class="control-group">
                     <label class="control-label">Password</label>
                     <div class="controls">
-                        <input type="password" style="width:220px;" autocomplete="new-password"
+                        <input type="password" style="width:220px;"
+                               autocomplete="new-password"
                                data-bind="value: settings.smb_password">
                     </div>
                 </div>
 
                 <div class="control-group">
-                    <label class="control-label">Domain <small class="muted">(optional)</small></label>
+                    <label class="control-label">
+                        Domain <small class="muted">(optional)</small>
+                    </label>
                     <div class="controls">
                         <input type="text" style="width:180px;"
                                data-bind="value: settings.smb_domain"
@@ -208,7 +215,8 @@
                 <div class="control-group">
                     <label class="control-label">SMB version</label>
                     <div class="controls">
-                        <select data-bind="value: settings.smb_version" style="width:100px;">
+                        <select data-bind="value: settings.smb_version"
+                                style="width:100px;">
                             <option value="2.0">2.0</option>
                             <option value="2.1">2.1</option>
                             <option value="3.0">3.0</option>
@@ -257,11 +265,14 @@
             <div class="control-group">
                 <div class="controls">
                     <label class="checkbox">
-                        <input type="checkbox" data-bind="checked: settings.exclude_timelapse">
-                        Exclude <strong>timelapse</strong> files (recommended — can be very large)
+                        <input type="checkbox"
+                               data-bind="checked: settings.exclude_timelapse">
+                        Exclude <strong>timelapse</strong> files
+                        (recommended — can be very large)
                     </label>
                     <label class="checkbox">
-                        <input type="checkbox" data-bind="checked: settings.exclude_uploads">
+                        <input type="checkbox"
+                               data-bind="checked: settings.exclude_uploads">
                         Exclude <strong>uploads</strong> (GCODE files)
                     </label>
                 </div>
@@ -289,7 +300,8 @@
                     <label class="radio">
                         <input type="radio" name="nasbackup_snm" value="true"
                                data-bind="checked: settings.server_name_auto">
-                        Auto-detect from OctoPrint appearance name (falls back to hostname)
+                        Auto-detect from OctoPrint appearance name
+                        (falls back to hostname)
                     </label>
                     <label class="radio"
                            style="display:flex; align-items:center; gap:8px; margin-top:6px;">
@@ -298,7 +310,7 @@
                         <span style="white-space:nowrap;">Manual:</span>
                         <input type="text" style="width:160px; margin:0;"
                                data-bind="value: settings.server_name_manual,
-                                          enable: settings.server_name_auto() === 'false' || settings.server_name_auto() === false"
+                                          enable: !serverNameAuto()"
                                placeholder="MyPrinter">
                     </label>
                 </div>
@@ -308,7 +320,8 @@
             <div class="control-group">
                 <div class="controls">
                     <label class="checkbox">
-                        <input type="checkbox" data-bind="checked: settings.copy_log_to_nas">
+                        <input type="checkbox"
+                               data-bind="checked: settings.copy_log_to_nas">
                         Copy backup log to NAS alongside each snapshot
                     </label>
                 </div>
@@ -328,7 +341,7 @@
                 </div>
             </div>
 
-            <!-- ko if: settings.system_backup_enabled() -->
+            <!-- ko if: systemBackupEnabled() -->
             <div class="control-group">
                 <label class="control-label">Paths to back up</label>
                 <div class="controls">
@@ -337,8 +350,8 @@
                               style="font-family:monospace; font-size:12px;"></textarea>
                     <span class="help-block muted">
                         One path per line. Files and directories supported.<br>
-                        SMB mode: packed into <code>system_backup.tar.gz</code>.<br>
-                        Local mode: copied preserving directory structure.
+                        SMB: packed into <code>system_backup.tar.gz</code>.<br>
+                        Local: copied preserving directory structure.
                     </span>
                 </div>
             </div>
@@ -351,13 +364,15 @@
             <div class="control-group">
                 <div class="controls">
                     <label class="checkbox">
-                        <input type="checkbox" data-bind="checked: settings.retention_enabled">
-                        <strong>Enable automatic pruning</strong> of old snapshots on the NAS
+                        <input type="checkbox"
+                               data-bind="checked: settings.retention_enabled">
+                        <strong>Enable automatic pruning</strong>
+                        of old snapshots on the NAS
                     </label>
                 </div>
             </div>
 
-            <!-- ko if: settings.retention_enabled() -->
+            <!-- ko if: retentionEnabled() -->
             <table class="table table-condensed" style="width:auto; margin-top:10px;">
                 <thead>
                     <tr>
@@ -402,8 +417,7 @@
                 </tbody>
             </table>
             <p class="muted" style="font-size:11px; margin-top:4px;">
-                Evaluated newest-first. The first snapshot in each time window is kept;
-                everything else is deleted.
+                Newest snapshot in each window is kept; everything older is deleted.
             </p>
             <!-- /ko -->
         </div>
@@ -463,7 +477,7 @@
                 <!-- ko ifnot: backupRunning -->
                 <button class="btn btn-primary btn-small"
                         data-bind="click: triggerBackup,
-                                   enable: !triggerBusy() && settings.enabled()">
+                                   enable: !triggerBusy() && isEnabled()">
                     <i class="fas fa-play"></i> Run Backup Now
                 </button>
                 <!-- /ko -->
