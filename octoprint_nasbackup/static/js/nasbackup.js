@@ -21,7 +21,10 @@ $(function () {
 
         self.triggerBusy = ko.observable(false);
         self.testBusy    = ko.observable(false);
+        self.installBusy = ko.observable(false);
         self.testResult  = ko.observable(null);
+        self.smbclientInstalled   = ko.observable(true);
+        self.smbclientInstallHint = ko.observable("sudo apt install smbclient");
 
         // settings is set in onBeforeBinding — null until then.
         // NEVER call settings.xxx() directly in data-bind attributes.
@@ -119,6 +122,8 @@ $(function () {
                         status: "never", message: "", time: null
                     });
                     self.nextRun(data.next_run || null);
+                    self.smbclientInstalled(data.smbclient_installed === true);
+                    self.smbclientInstallHint(data.smbclient_install_hint || "sudo apt install smbclient");
                     if (Array.isArray(data.logs)) {
                         self.logs(data.logs);
                         var el = document.getElementById("nasbackup_log_area");
@@ -129,6 +134,14 @@ $(function () {
 
         self.triggerBackup = function () {
             if (self.triggerBusy() || self.backupRunning()) { return; }
+            if (!self.smbclientInstalled()) {
+                new PNotify({
+                    title: "NAS Backup",
+                    text: "smbclient is not installed. " + self.smbclientInstallHint(),
+                    type: "error"
+                });
+                return;
+            }
             self.triggerBusy(true);
             OctoPrint.simpleApiCommand("nasbackup", "trigger_backup", {})
                 .done(function (data) {
@@ -171,6 +184,37 @@ $(function () {
         self.clearLogs = function () {
             OctoPrint.simpleApiCommand("nasbackup", "clear_logs", {})
                 .done(function () { self.logs([]); });
+        };
+
+        self.installSmbclient = function () {
+            if (self.installBusy()) { return; }
+            self.installBusy(true);
+            OctoPrint.simpleApiCommand("nasbackup", "install_smbclient", {})
+                .done(function (data) {
+                    if (data.success) {
+                        new PNotify({
+                            title: "NAS Backup",
+                            text: data.message || "smbclient installed.",
+                            type: "success",
+                            hide: true
+                        });
+                    } else {
+                        new PNotify({
+                            title: "NAS Backup",
+                            text: data.message || "Automatic install failed.",
+                            type: "error"
+                        });
+                    }
+                    self.refreshStatus();
+                })
+                .fail(function () {
+                    new PNotify({
+                        title: "NAS Backup",
+                        text: "Install request failed.",
+                        type: "error"
+                    });
+                })
+                .always(function () { self.installBusy(false); });
         };
 
         self.logLineClass = function (line) {
