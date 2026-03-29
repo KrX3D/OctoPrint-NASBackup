@@ -66,15 +66,14 @@ Open OctoPrint → Settings → **NAS Backup**.
 
 ```
 <share>/<subdir>/<server_name>/
-  snapshots/
-    2025-01-15_030000/
-      octoprint-backup-....zip
-      system_backup.tar.gz   (if enabled)
-      backup.log             (if enabled)
-      _backup_info.txt
-    2025-01-08_030000/
-      ...
-  latest -> snapshots/2025-01-15_030000
+  2025-01-15_030000/
+    octoprint-backup-....zip
+    system_backup.tar.gz   (if enabled)
+    backup.log             (if enabled)
+    _backup_info.txt
+  2025-01-08_030000/
+    ...
+  latest -> 2025-01-15_030000
 ```
 
 ---
@@ -126,4 +125,9 @@ Open OctoPrint → Settings → **NAS Backup**.
 ### 0.3.11
 - Wait for asynchronous OctoPrint backup ZIP creation (up to 180s) before failing.
 - Use trigger timestamp matching to detect fresh backup ZIPs more reliably.
+
+### 0.3.12
+- Store backups directly under the selected SMB subdirectory/server path (no forced `snapshots` folder).
+- Write/upload `backup.log` at the end of the run so it contains complete logs.
+- Improved SMB directory parsing for retention and snapshot counting.
 
