@@ -44,7 +44,7 @@ The plugin uses `smbclient` on the OctoPrint host.
 sudo apt install smbclient
 ```
 
-If `smbclient` is missing, the NAS tab shows an install hint and can try automatic installation.
+If `smbclient` is missing, the NAS tab shows an install hint and the manual command to run.
 
 
 ## Settings
@@ -93,7 +93,7 @@ Open OctoPrint → Settings → **NAS Backup**.
 - Simplified plugin behavior to SMB-only backups and improved SMB dependency messaging.
 
 ### 0.3.5
-- Added smbclient dependency status + optional auto-install attempt from the NAS tab.
+- Added smbclient dependency status + install command hint in the NAS tab.
 - Fixed retention fields so they stay editable when pruning is enabled.
 - Manual backup button is now clickable whenever no backup is currently running.
 
@@ -102,4 +102,10 @@ Open OctoPrint → Settings → **NAS Backup**.
 - Added app-context handling for backup ZIP creation in worker thread.
 - Improved schedule form visibility (day fields always shown with usage hints).
 - Disabled manual backup action when smbclient is missing and show a clear notification.
+
+### 0.3.7
+- Removed non-working smbclient auto-install action from the UI (manual install hint only).
+- Added notification when a scheduled backup starts.
+- Added early smbclient prerequisite check before backup steps.
+- Improved OctoPrint backup trigger call to avoid permission wrapper identity errors.
 

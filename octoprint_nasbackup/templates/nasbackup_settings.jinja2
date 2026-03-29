@@ -151,16 +151,6 @@
                         smbclient is not installed. Run:
                         <code data-bind="text: smbclientInstallHint"></code>
                     </div>
-                    <button class="btn btn-warning btn-small"
-                            style="margin-top:8px;"
-                            data-bind="click: installSmbclient, enable: !installBusy()">
-                        <!-- ko ifnot: installBusy -->
-                        <i class="fas fa-download"></i> Try install smbclient
-                        <!-- /ko -->
-                        <!-- ko if: installBusy -->
-                        <i class="fas fa-spinner fa-spin"></i> Installing...
-                        <!-- /ko -->
-                    </button>
                     <!-- /ko -->
                 </div>
             </div>

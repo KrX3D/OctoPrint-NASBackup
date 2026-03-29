@@ -185,7 +185,9 @@ class NasBackupPlugin(
         # Startup backup
         if enabled and backup_on_start:
             self._plugin_log("Startup backup armed — will fire in {}s.".format(delay))
-            self._startup_timer = threading.Timer(delay, self._run_backup)
+            self._startup_timer = threading.Timer(
+                delay, lambda: self._run_backup(source="startup")
+            )
             self._startup_timer.daemon = True
             self._startup_timer.start()
         else:
@@ -210,7 +212,6 @@ class NasBackupPlugin(
             trigger_backup=[],
             test_connection=[],
             clear_logs=[],
-            install_smbclient=[],
         )
 
     def on_api_command(self, command, data):
@@ -224,7 +225,9 @@ class NasBackupPlugin(
                     "message": "A backup is already running."
                 }), 409
             t = threading.Thread(
-                target=self._run_backup, name="nasbackup-thread", daemon=True
+                target=lambda: self._run_backup(source="manual"),
+                name="nasbackup-thread",
+                daemon=True
             )
             t.start()
             return flask.jsonify({"success": True, "message": "Backup started."})
@@ -237,10 +240,6 @@ class NasBackupPlugin(
         elif command == "clear_logs":
             self._log_entries.clear()
             return flask.jsonify({"success": True})
-        elif command == "install_smbclient":
-            result = self._install_smbclient()
-            return flask.jsonify(result)
-
         return flask.abort(400)
 
     def on_api_get(self, request):
@@ -329,7 +328,10 @@ class NasBackupPlugin(
 
             # Fire backup
             self._plugin_log("Scheduled backup firing now.")
-            self._run_backup()
+            self._plugin_manager.send_plugin_message(
+                self._identifier, {"event": "scheduled_backup_started"}
+            )
+            self._run_backup(source="scheduled")
 
             # Calculate next run
             next_run = self._calc_next_run()
@@ -423,7 +425,7 @@ class NasBackupPlugin(
 
     # ── Core backup orchestration ─────────────────────────────────────────────
 
-    def _run_backup(self):
+    def _run_backup(self, source="manual"):
         acquired = self._backup_lock.acquire(blocking=False)
         if not acquired:
             self._plugin_log("Could not acquire backup lock — already running.")
@@ -441,6 +443,7 @@ class NasBackupPlugin(
             self._log("=" * 60)
             self._log("NAS Backup started  [{} v{}]".format(
                 socket.gethostname(), self._plugin_version))
+            self._log("Trigger       : {}".format(source))
             self._log("Timestamp     : {}".format(timestamp))
             self._log("Plugin enabled: {}".format(self._get_bool("enabled")))
             self._log("Transfer mode : {}".format(self._settings.get(["transfer_mode"])))
@@ -449,6 +452,12 @@ class NasBackupPlugin(
             if not self._get_bool("enabled"):
                 self._log("Plugin is disabled — aborting.", "WARNING")
                 self._set_status("skipped", "Skipped — plugin disabled.")
+                return
+
+            if not shutil.which("smbclient"):
+                hint = self._suggest_install_command()
+                self._log("smbclient missing — cannot run backup.", "ERROR")
+                self._set_status("failed", "smbclient missing. {}".format(hint))
                 return
 
             if self._get_bool("only_when_idle"):
@@ -531,9 +540,14 @@ class NasBackupPlugin(
         before = set(glob.glob(os.path.join(backup_dir, "*.zip")))
 
         try:
+            import inspect
             from octoprint.server import app as octoprint_app
             with octoprint_app.app_context():
-                result = backup_plugin.implementation.create_backup(exclude=excludes)
+                create_backup = inspect.unwrap(backup_plugin.implementation.create_backup)
+                if getattr(create_backup, "__self__", None) is backup_plugin.implementation:
+                    result = create_backup(exclude=excludes)
+                else:
+                    result = create_backup(backup_plugin.implementation, exclude=excludes)
         except Exception as exc:
             raise RuntimeError("OctoPrint backup plugin raised: {}".format(exc))
 
@@ -949,60 +963,6 @@ class NasBackupPlugin(
             return "sudo pacman -S smbclient"
         return "Install smbclient with your distro package manager"
 
-    def _install_smbclient(self):
-        if shutil.which("smbclient"):
-            return {"success": True, "message": "smbclient is already installed."}
-
-        candidates = [
-            ["apt-get", "update"],
-            ["apt-get", "install", "-y", "smbclient"],
-            ["apt", "install", "-y", "smbclient"],
-            ["dnf", "install", "-y", "samba-client"],
-            ["yum", "install", "-y", "samba-client"],
-            ["zypper", "--non-interactive", "install", "samba-client"],
-            ["pacman", "-S", "--noconfirm", "smbclient"],
-        ]
-
-        errors = []
-        for cmd in candidates:
-            if not shutil.which(cmd[0]):
-                continue
-            try:
-                run_cmd = cmd
-                if os.geteuid() != 0:
-                    if shutil.which("sudo"):
-                        run_cmd = ["sudo", "-n"] + cmd
-                    else:
-                        errors.append(
-                            "{} (requires root; sudo unavailable)".format(" ".join(cmd))
-                        )
-                        continue
-
-                result = subprocess.run(
-                    run_cmd, capture_output=True, text=True, timeout=300
-                )
-                if result.returncode == 0 and shutil.which("smbclient"):
-                    return {
-                        "success": True,
-                        "message": "smbclient installation successful.",
-                    }
-                err = (result.stderr or result.stdout or "").strip().splitlines()
-                errors.append(
-                    "{} -> {}".format(" ".join(run_cmd), err[0] if err else "failed")
-                )
-            except Exception as exc:
-                errors.append("{} -> {}".format(" ".join(cmd), exc))
-
-        return {
-            "success": False,
-            "message": (
-                "Automatic install failed. Please run manually: {}".format(
-                    self._suggest_install_command()
-                )
-            ),
-            "details": errors[-3:],
-        }
-
     @staticmethod
     def _sanitize_name(name):
         name = re.sub(r"\s+", "_", name)
@@ -1084,7 +1044,7 @@ class NasBackupPlugin(
 __plugin_name__         = "NAS Backup"
 __plugin_identifier__   = "nasbackup"
 __plugin_pythoncompat__ = ">=3.7,<4"
-__plugin_version__      = "0.3.6"
+__plugin_version__      = "0.3.7"
 __plugin_description__  = (
     "Automated OctoPrint backups to a NAS over SMB - "
     "scheduled (daily/weekly/monthly), GFS retention."

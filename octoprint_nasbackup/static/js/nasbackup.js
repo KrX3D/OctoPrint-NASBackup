@@ -21,7 +21,6 @@ $(function () {
 
         self.triggerBusy = ko.observable(false);
         self.testBusy    = ko.observable(false);
-        self.installBusy = ko.observable(false);
         self.testResult  = ko.observable(null);
         self.smbclientInstalled   = ko.observable(true);
         self.smbclientInstallHint = ko.observable("sudo apt install smbclient");
@@ -111,6 +110,19 @@ $(function () {
             }
         };
 
+        self.onDataUpdaterPluginMessage = function (plugin, data) {
+            if (plugin !== "nasbackup" || !data || !data.event) { return; }
+            if (data.event === "scheduled_backup_started") {
+                new PNotify({
+                    title: "NAS Backup",
+                    text: "Scheduled backup started.",
+                    type: "info",
+                    hide: true
+                });
+                self.refreshStatus();
+            }
+        };
+
         // ── API ───────────────────────────────────────────────────────
 
         self.refreshStatus = function () {
@@ -184,37 +196,6 @@ $(function () {
         self.clearLogs = function () {
             OctoPrint.simpleApiCommand("nasbackup", "clear_logs", {})
                 .done(function () { self.logs([]); });
-        };
-
-        self.installSmbclient = function () {
-            if (self.installBusy()) { return; }
-            self.installBusy(true);
-            OctoPrint.simpleApiCommand("nasbackup", "install_smbclient", {})
-                .done(function (data) {
-                    if (data.success) {
-                        new PNotify({
-                            title: "NAS Backup",
-                            text: data.message || "smbclient installed.",
-                            type: "success",
-                            hide: true
-                        });
-                    } else {
-                        new PNotify({
-                            title: "NAS Backup",
-                            text: data.message || "Automatic install failed.",
-                            type: "error"
-                        });
-                    }
-                    self.refreshStatus();
-                })
-                .fail(function () {
-                    new PNotify({
-                        title: "NAS Backup",
-                        text: "Install request failed.",
-                        type: "error"
-                    });
-                })
-                .always(function () { self.installBusy(false); });
         };
 
         self.logLineClass = function (line) {
