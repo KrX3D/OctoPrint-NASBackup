@@ -136,3 +136,7 @@ Open OctoPrint → Settings → **NAS Backup**.
 - Added startup kind detection in logs (`system_boot` vs `octoprint_restart`, best effort).
 - Improved schedule button selection persistence on page reload.
 
+### 0.3.14
+- Added startup backup event filters: cold boot, system restart, and OctoPrint restart.
+- Added startup state persistence to classify restart type and avoid duplicate startup triggers.
+

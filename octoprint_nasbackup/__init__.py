@@ -6,6 +6,7 @@ from __future__ import absolute_import, unicode_literals
 
 import datetime
 import glob
+import json
 import os
 import re
 import shutil
@@ -60,6 +61,9 @@ class NasBackupPlugin(
             # Startup backup
             backup_on_startup=False,
             startup_delay=10,
+            backup_on_startup_cold_boot=True,
+            backup_on_startup_system_restart=True,
+            backup_on_startup_octoprint_restart=True,
             # Transfer
             transfer_mode="smbclient",
             local_path="/mnt/octoprint_backup",
@@ -169,14 +173,18 @@ class NasBackupPlugin(
         backup_on_start = self._get_bool("backup_on_startup")
         delay           = int(self._settings.get(["startup_delay"]) or 10)
         startup_kind    = self._detect_startup_kind()
+        startup_event_enabled = self._get_bool(
+            "backup_on_startup_{}".format(startup_kind)
+        ) if startup_kind in ("cold_boot", "system_restart", "octoprint_restart") else False
 
         self._plugin_log(
             "Startup config: enabled={} backup_on_startup={} startup_delay={}s startup_kind={} "
-            "server_name_auto={} transfer_mode={}".format(
+            "kind_enabled={} server_name_auto={} transfer_mode={}".format(
                 enabled,
                 backup_on_start,
                 delay,
                 startup_kind,
+                startup_event_enabled,
                 self._settings.get(["server_name_auto"]),
                 self._settings.get(["transfer_mode"]),
             )
@@ -186,7 +194,7 @@ class NasBackupPlugin(
         self._reschedule()
 
         # Startup backup
-        if enabled and backup_on_start:
+        if enabled and backup_on_start and startup_event_enabled:
             self._plugin_log("Startup backup armed — will fire in {}s.".format(delay))
             self._startup_timer = threading.Timer(
                 delay, lambda: self._run_backup(source="startup_{}".format(startup_kind))
@@ -195,10 +203,15 @@ class NasBackupPlugin(
             self._startup_timer.start()
         else:
             self._plugin_log(
-                "Startup backup NOT armed (enabled={}, backup_on_startup={}).".format(
-                    enabled, backup_on_start
+                "Startup backup NOT armed (enabled={}, backup_on_startup={}, kind_enabled={}).".format(
+                    enabled, backup_on_start, startup_event_enabled
                 )
             )
+
+        self._write_startup_state({
+            "boot_id": self._get_boot_id(),
+            "last_startup_ts": time.time(),
+        })
 
     # ── ShutdownPlugin ────────────────────────────────────────────────────────
 
@@ -207,6 +220,10 @@ class NasBackupPlugin(
         if self._startup_timer is not None:
             self._startup_timer.cancel()
             self._startup_timer = None
+        self._write_startup_state({
+            "boot_id": self._get_boot_id(),
+            "last_shutdown_ts": time.time(),
+        })
 
     # ── SimpleApiPlugin ───────────────────────────────────────────────────────
 
@@ -971,15 +988,55 @@ class NasBackupPlugin(
     def _detect_startup_kind(self):
         """
         Best-effort startup source detection:
-        - system_boot: machine uptime is short (<=5 min)
-        - octoprint_restart: uptime is longer
+        - octoprint_restart: same boot_id as previous run
+        - system_restart: boot changed and there was a recent graceful shutdown marker
+        - cold_boot: boot changed and no recent graceful shutdown marker
         """
+        state = self._read_startup_state()
+        current_boot_id = self._get_boot_id()
         try:
-            with open("/proc/uptime", "r") as f:
-                uptime_sec = float((f.read().split() or ["0"])[0])
-            return "system_boot" if uptime_sec <= 300 else "octoprint_restart"
+            prev_boot_id = state.get("boot_id")
+            if prev_boot_id and prev_boot_id == current_boot_id:
+                return "octoprint_restart"
+
+            last_shutdown_ts = float(state.get("last_shutdown_ts") or 0)
+            if last_shutdown_ts > 0 and (time.time() - last_shutdown_ts) < 900:
+                return "system_restart"
+            return "cold_boot"
         except Exception:
             return "unknown"
+
+    @staticmethod
+    def _get_boot_id():
+        try:
+            with open("/proc/sys/kernel/random/boot_id", "r") as f:
+                return f.read().strip()
+        except Exception:
+            return None
+
+    def _startup_state_path(self):
+        return os.path.join(self.get_plugin_data_folder(), "startup_state.json")
+
+    def _read_startup_state(self):
+        path = self._startup_state_path()
+        if not os.path.isfile(path):
+            return {}
+        try:
+            with open(path, "r") as f:
+                data = json.load(f)
+            return data if isinstance(data, dict) else {}
+        except Exception:
+            return {}
+
+    def _write_startup_state(self, updates):
+        try:
+            os.makedirs(self.get_plugin_data_folder(), exist_ok=True)
+            data = self._read_startup_state()
+            data.update(updates or {})
+            with open(self._startup_state_path(), "w") as f:
+                json.dump(data, f)
+        except Exception as exc:
+            self._plugin_log("Could not persist startup state: {}".format(exc))
 
     def _suggest_install_command(self):
         if shutil.which("apt-get") or shutil.which("apt"):
@@ -1084,7 +1141,7 @@ class NasBackupPlugin(
 __plugin_name__         = "NAS Backup"
 __plugin_identifier__   = "nasbackup"
 __plugin_pythoncompat__ = ">=3.7,<4"
-__plugin_version__      = "0.3.13"
+__plugin_version__      = "0.3.14"
 __plugin_description__  = (
     "Automated OctoPrint backups to a NAS over SMB - "
     "scheduled (daily/weekly/monthly), GFS retention."

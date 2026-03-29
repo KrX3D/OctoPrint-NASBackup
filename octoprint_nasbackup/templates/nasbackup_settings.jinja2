@@ -128,6 +128,27 @@
                     </span>
                 </div>
             </div>
+
+            <div class="control-group">
+                <label class="control-label">Run on</label>
+                <div class="controls">
+                    <label class="checkbox">
+                        <input type="checkbox"
+                               data-bind="checked: settings.backup_on_startup_cold_boot">
+                        Fresh cold boot (power on / no recent shutdown marker)
+                    </label>
+                    <label class="checkbox">
+                        <input type="checkbox"
+                               data-bind="checked: settings.backup_on_startup_system_restart">
+                        System restart/reboot (detected graceful restart)
+                    </label>
+                    <label class="checkbox">
+                        <input type="checkbox"
+                               data-bind="checked: settings.backup_on_startup_octoprint_restart">
+                        OctoPrint service restart (same OS boot session)
+                    </label>
+                </div>
+            </div>
             <!-- /ko -->
         </div>
 
