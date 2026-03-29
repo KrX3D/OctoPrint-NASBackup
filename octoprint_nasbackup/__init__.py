@@ -13,6 +13,7 @@ import socket
 import subprocess
 import tempfile
 import threading
+import time
 import traceback
 from collections import deque
 
@@ -534,6 +535,7 @@ class NasBackupPlugin(
         backup_dir = self._get_octoprint_backup_dir()
         os.makedirs(backup_dir, exist_ok=True)
         before = set(glob.glob(os.path.join(backup_dir, "*.zip")))
+        trigger_ts = time.time()
 
         try:
             kwargs = {}
@@ -554,21 +556,21 @@ class NasBackupPlugin(
         if result and isinstance(result, str) and os.path.isfile(result):
             return result
 
-        after   = set(glob.glob(os.path.join(backup_dir, "*.zip")))
-        new_zip = after - before
-        if new_zip:
-            return max(new_zip, key=os.path.getmtime)
+        # Some OctoPrint versions create backups asynchronously; wait for a new ZIP.
+        deadline = time.time() + 180
+        while time.time() < deadline:
+            after   = set(glob.glob(os.path.join(backup_dir, "*.zip")))
+            new_zip = after - before
+            if new_zip:
+                return max(new_zip, key=os.path.getmtime)
 
-        all_zips = sorted(
-            glob.glob(os.path.join(backup_dir, "*.zip")),
-            key=os.path.getmtime, reverse=True
-        )
-        if all_zips:
-            age = (datetime.datetime.now() -
-                   datetime.datetime.fromtimestamp(
-                       os.path.getmtime(all_zips[0]))).total_seconds()
-            if age < 120:
+            all_zips = sorted(
+                glob.glob(os.path.join(backup_dir, "*.zip")),
+                key=os.path.getmtime, reverse=True
+            )
+            if all_zips and os.path.getmtime(all_zips[0]) >= trigger_ts - 1:
                 return all_zips[0]
+            time.sleep(2)
 
         raise RuntimeError("No new backup ZIP detected after triggering OctoPrint backup.")
 
@@ -1053,7 +1055,7 @@ class NasBackupPlugin(
 __plugin_name__         = "NAS Backup"
 __plugin_identifier__   = "nasbackup"
 __plugin_pythoncompat__ = ">=3.7,<4"
-__plugin_version__      = "0.3.10"
+__plugin_version__      = "0.3.11"
 __plugin_description__  = (
     "Automated OctoPrint backups to a NAS over SMB - "
     "scheduled (daily/weekly/monthly), GFS retention."

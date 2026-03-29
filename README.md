@@ -123,3 +123,7 @@ Open OctoPrint → Settings → **NAS Backup**.
 - Retried backup helper call without excludes when helper signature does not support exclude arg.
 - Reduced visual blank lines in log viewer rendering.
 
+### 0.3.11
+- Wait for asynchronous OctoPrint backup ZIP creation (up to 180s) before failing.
+- Use trigger timestamp matching to detect fresh backup ZIPs more reliably.
+
