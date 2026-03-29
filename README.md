@@ -105,3 +105,8 @@ Open OctoPrint → Settings → **NAS Backup**.
 - Reworked the settings UI so schedule and retention controls are reliably visible.
 - Simplified plugin behavior to SMB-only backups and improved SMB dependency messaging.
 
+### 0.3.5
+- Added smbclient dependency status + optional auto-install attempt from the NAS tab.
+- Fixed retention fields so they stay editable when pruning is enabled.
+- Manual backup button is now clickable whenever no backup is currently running.
+

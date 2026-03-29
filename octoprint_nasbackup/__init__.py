@@ -206,7 +206,12 @@ class NasBackupPlugin(
     # ── SimpleApiPlugin ───────────────────────────────────────────────────────
 
     def get_api_commands(self):
-        return dict(trigger_backup=[], test_connection=[], clear_logs=[])
+        return dict(
+            trigger_backup=[],
+            test_connection=[],
+            clear_logs=[],
+            install_smbclient=[],
+        )
 
     def on_api_command(self, command, data):
         self._plugin_log("API command received: {}".format(command))
@@ -232,6 +237,9 @@ class NasBackupPlugin(
         elif command == "clear_logs":
             self._log_entries.clear()
             return flask.jsonify({"success": True})
+        elif command == "install_smbclient":
+            result = self._install_smbclient()
+            return flask.jsonify(result)
 
         return flask.abort(400)
 
@@ -250,6 +258,8 @@ class NasBackupPlugin(
             startup_pending=(
                 self._startup_timer is not None and self._startup_timer.is_alive()
             ),
+            smbclient_installed=bool(shutil.which("smbclient")),
+            smbclient_install_hint=self._suggest_install_command(),
             logs=list(self._log_entries),
         ))
 
@@ -871,7 +881,7 @@ class NasBackupPlugin(
                 "success": False,
                 "message": (
                     "smbclient is required on the OctoPrint host. "
-                    "Install with: sudo apt install smbclient"
+                    "Install with: {}".format(self._suggest_install_command())
                 ),
             }
         self._plugin_log(
@@ -923,6 +933,73 @@ class NasBackupPlugin(
     def _get_transfer_mode(self):
         # SMB-only plugin behavior.
         return "smbclient"
+
+    def _suggest_install_command(self):
+        if shutil.which("apt-get") or shutil.which("apt"):
+            return "sudo apt install smbclient"
+        if shutil.which("dnf"):
+            return "sudo dnf install samba-client"
+        if shutil.which("yum"):
+            return "sudo yum install samba-client"
+        if shutil.which("zypper"):
+            return "sudo zypper install samba-client"
+        if shutil.which("pacman"):
+            return "sudo pacman -S smbclient"
+        return "Install smbclient with your distro package manager"
+
+    def _install_smbclient(self):
+        if shutil.which("smbclient"):
+            return {"success": True, "message": "smbclient is already installed."}
+
+        candidates = [
+            ["apt-get", "update"],
+            ["apt-get", "install", "-y", "smbclient"],
+            ["apt", "install", "-y", "smbclient"],
+            ["dnf", "install", "-y", "samba-client"],
+            ["yum", "install", "-y", "samba-client"],
+            ["zypper", "--non-interactive", "install", "samba-client"],
+            ["pacman", "-S", "--noconfirm", "smbclient"],
+        ]
+
+        errors = []
+        for cmd in candidates:
+            if not shutil.which(cmd[0]):
+                continue
+            try:
+                run_cmd = cmd
+                if os.geteuid() != 0:
+                    if shutil.which("sudo"):
+                        run_cmd = ["sudo", "-n"] + cmd
+                    else:
+                        errors.append(
+                            "{} (requires root; sudo unavailable)".format(" ".join(cmd))
+                        )
+                        continue
+
+                result = subprocess.run(
+                    run_cmd, capture_output=True, text=True, timeout=300
+                )
+                if result.returncode == 0 and shutil.which("smbclient"):
+                    return {
+                        "success": True,
+                        "message": "smbclient installation successful.",
+                    }
+                err = (result.stderr or result.stdout or "").strip().splitlines()
+                errors.append(
+                    "{} -> {}".format(" ".join(run_cmd), err[0] if err else "failed")
+                )
+            except Exception as exc:
+                errors.append("{} -> {}".format(" ".join(cmd), exc))
+
+        return {
+            "success": False,
+            "message": (
+                "Automatic install failed. Please run manually: {}".format(
+                    self._suggest_install_command()
+                )
+            ),
+            "details": errors[-3:],
+        }
 
     @staticmethod
     def _sanitize_name(name):
@@ -1005,7 +1082,7 @@ class NasBackupPlugin(
 __plugin_name__         = "NAS Backup"
 __plugin_identifier__   = "nasbackup"
 __plugin_pythoncompat__ = ">=3.7,<4"
-__plugin_version__      = "0.3.4"
+__plugin_version__      = "0.3.5"
 __plugin_description__  = (
     "Automated OctoPrint backups to a NAS - "
     "scheduled (daily/weekly/monthly), GFS retention, SMB or local path."

@@ -136,6 +136,33 @@
                 This plugin now uses SMB only. Please ensure
                 <code>smbclient</code> is installed on the OctoPrint host.
             </p>
+            <div class="control-group">
+                <div class="controls">
+                    <!-- ko if: smbclientInstalled -->
+                    <div class="nasbackup-test-result ok">
+                        <i class="fas fa-check-circle"></i>
+                        smbclient is installed.
+                    </div>
+                    <!-- /ko -->
+                    <!-- ko ifnot: smbclientInstalled -->
+                    <div class="nasbackup-test-result err">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        smbclient is not installed. Run:
+                        <code data-bind="text: smbclientInstallHint"></code>
+                    </div>
+                    <button class="btn btn-warning btn-small"
+                            style="margin-top:8px;"
+                            data-bind="click: installSmbclient, enable: !installBusy()">
+                        <!-- ko ifnot: installBusy -->
+                        <i class="fas fa-download"></i> Try install smbclient
+                        <!-- /ko -->
+                        <!-- ko if: installBusy -->
+                        <i class="fas fa-spinner fa-spin"></i> Installing...
+                        <!-- /ko -->
+                    </button>
+                    <!-- /ko -->
+                </div>
+            </div>
 
             <div>
                 <p class="nasbackup-section-heading" style="margin-top:4px;">SMB Credentials</p>
@@ -372,7 +399,7 @@
                         <td><strong>Daily</strong></td>
                         <td style="text-align:center;">
                             <input type="number" min="0" max="365" style="width:65px;"
-                                   data-bind="value: settings.keep_daily, enable: retentionEnabled()">
+                                   data-bind="value: settings.keep_daily">
                         </td>
                         <td style="padding-left:12px; color:#666;">One per day for N days</td>
                     </tr>
@@ -380,7 +407,7 @@
                         <td><strong>Weekly</strong></td>
                         <td style="text-align:center;">
                             <input type="number" min="0" max="104" style="width:65px;"
-                                   data-bind="value: settings.keep_weekly, enable: retentionEnabled()">
+                                   data-bind="value: settings.keep_weekly">
                         </td>
                         <td style="padding-left:12px; color:#666;">One per week for N weeks</td>
                     </tr>
@@ -388,7 +415,7 @@
                         <td><strong>Monthly</strong></td>
                         <td style="text-align:center;">
                             <input type="number" min="0" max="120" style="width:65px;"
-                                   data-bind="value: settings.keep_monthly, enable: retentionEnabled()">
+                                   data-bind="value: settings.keep_monthly">
                         </td>
                         <td style="padding-left:12px; color:#666;">One per month for N months</td>
                     </tr>
@@ -396,7 +423,7 @@
                         <td><strong>Yearly</strong></td>
                         <td style="text-align:center;">
                             <input type="number" min="0" max="50" style="width:65px;"
-                                   data-bind="value: settings.keep_yearly, enable: retentionEnabled()">
+                                   data-bind="value: settings.keep_yearly">
                         </td>
                         <td style="padding-left:12px; color:#666;">One per year for N years</td>
                     </tr>
@@ -462,7 +489,7 @@
                 <!-- ko ifnot: backupRunning -->
                 <button class="btn btn-primary btn-small"
                         data-bind="click: triggerBackup,
-                                   enable: !triggerBusy() && isEnabled()">
+                                   enable: !triggerBusy()">
                     <i class="fas fa-play"></i> Run Backup Now
                 </button>
                 <!-- /ko -->
