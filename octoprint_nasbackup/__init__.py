@@ -60,7 +60,7 @@ class NasBackupPlugin(
             backup_on_startup=False,
             startup_delay=120,
             # Transfer
-            transfer_mode="local",
+            transfer_mode="smbclient",
             local_path="/mnt/octoprint_backup",
             # SMB
             smb_host="192.168.1.11",
@@ -103,6 +103,7 @@ class NasBackupPlugin(
         old_stime    = self._settings.get(["schedule_time"])
 
         octoprint.plugin.SettingsPlugin.on_settings_save(self, data)
+        self._force_smb_mode()
 
         new_enabled  = self._get_bool("enabled")
         new_stype    = self._settings.get(["schedule_type"])
@@ -158,6 +159,7 @@ class NasBackupPlugin(
     # ── StartupPlugin ─────────────────────────────────────────────────────────
 
     def on_after_startup(self):
+        self._force_smb_mode()
         self._plugin_log(
             "NAS Backup plugin started (v{})".format(self._plugin_version)
         )
@@ -449,7 +451,7 @@ class NasBackupPlugin(
                     return
 
             server_name   = self._get_server_name()
-            transfer_mode = self._settings.get(["transfer_mode"])
+            transfer_mode = self._get_transfer_mode()
             self._log("Server name   : {}".format(server_name))
             self._log("Transfer mode : {}".format(transfer_mode))
 
@@ -465,9 +467,7 @@ class NasBackupPlugin(
             # Step 2
             self._log("")
             self._log("Step 2/4 — Transferring to NAS...")
-            if transfer_mode == "local":
-                self._transfer_local(zip_path, server_name, timestamp)
-            elif transfer_mode == "smbclient":
+            if transfer_mode == "smbclient":
                 self._transfer_smbclient(zip_path, server_name, timestamp)
             else:
                 raise RuntimeError("Unknown transfer_mode: '{}'".format(transfer_mode))
@@ -865,45 +865,27 @@ class NasBackupPlugin(
     # ── Test connection ───────────────────────────────────────────────────────
 
     def _test_connection(self):
-        mode = self._settings.get(["transfer_mode"])
-        self._plugin_log("Test connection: mode={}".format(mode))
-
-        if mode == "local":
-            path = self._resolve_vars(
-                self._settings.get(["local_path"]) or "/mnt/octoprint_backup"
+        self._plugin_log("Test connection: mode=smbclient")
+        if not shutil.which("smbclient"):
+            return {
+                "success": False,
+                "message": (
+                    "smbclient is required on the OctoPrint host. "
+                    "Install with: sudo apt install smbclient"
+                ),
+            }
+        self._plugin_log(
+            "Test SMB: host={} share={}".format(
+                self._settings.get(["smb_host"]),
+                self._settings.get(["smb_share"]),
             )
-            self._plugin_log("Test local path: {}".format(path))
-            if not os.path.isdir(path):
-                return {"success": False,
-                        "message": "Path does not exist: {}".format(path)}
-            test = os.path.join(path, ".nasbackup_writetest")
-            try:
-                with open(test, "w") as f:
-                    f.write("ok")
-                os.unlink(test)
-                return {"success": True,
-                        "message": "Path accessible and writable: {}".format(path)}
-            except Exception as exc:
-                return {"success": False, "message": "Not writable: {}".format(exc)}
-
-        elif mode == "smbclient":
-            if not shutil.which("smbclient"):
-                return {"success": False,
-                        "message": "smbclient not found — sudo apt install smbclient"}
-            self._plugin_log(
-                "Test SMB: host={} share={}".format(
-                    self._settings.get(["smb_host"]),
-                    self._settings.get(["smb_share"]),
-                )
-            )
-            rc, out, err = self._smb_exec("ls")
-            self._plugin_log("SMB test result: rc={} err={}".format(rc, err.strip()[:100]))
-            if rc == 0:
-                return {"success": True, "message": "SMB connection successful."}
-            detail = (err or out or "unknown error").strip().splitlines()[0]
-            return {"success": False, "message": "SMB failed: {}".format(detail)}
-
-        return {"success": False, "message": "Unknown transfer mode: {}".format(mode)}
+        )
+        rc, out, err = self._smb_exec("ls")
+        self._plugin_log("SMB test result: rc={} err={}".format(rc, err.strip()[:100]))
+        if rc == 0:
+            return {"success": True, "message": "SMB connection successful."}
+        detail = (err or out or "unknown error").strip().splitlines()[0]
+        return {"success": False, "message": "SMB failed: {}".format(detail)}
 
     # ── Utility helpers ───────────────────────────────────────────────────────
 
@@ -930,6 +912,17 @@ class NasBackupPlugin(
         name = self._settings.get(["server_name_manual"]) or "OctoPrint"
         self._log("  Using manual server name: {}".format(name))
         return self._sanitize_name(name)
+
+    def _force_smb_mode(self):
+        mode = self._settings.get(["transfer_mode"])
+        if mode != "smbclient":
+            self._settings.set(["transfer_mode"], "smbclient")
+            self._settings.save()
+            self._plugin_log("Migrated transfer_mode '{}' -> 'smbclient'.".format(mode))
+
+    def _get_transfer_mode(self):
+        # SMB-only plugin behavior.
+        return "smbclient"
 
     @staticmethod
     def _sanitize_name(name):
@@ -1012,7 +1005,7 @@ class NasBackupPlugin(
 __plugin_name__         = "NAS Backup"
 __plugin_identifier__   = "nasbackup"
 __plugin_pythoncompat__ = ">=3.7,<4"
-__plugin_version__      = "0.3.2"
+__plugin_version__      = "0.3.4"
 __plugin_description__  = (
     "Automated OctoPrint backups to a NAS - "
     "scheduled (daily/weekly/monthly), GFS retention, SMB or local path."
