@@ -531,7 +531,9 @@ class NasBackupPlugin(
         before = set(glob.glob(os.path.join(backup_dir, "*.zip")))
 
         try:
-            result = backup_plugin.implementation.create_backup(exclude=excludes)
+            from octoprint.server import app as octoprint_app
+            with octoprint_app.app_context():
+                result = backup_plugin.implementation.create_backup(exclude=excludes)
         except Exception as exc:
             raise RuntimeError("OctoPrint backup plugin raised: {}".format(exc))
 
@@ -1082,10 +1084,10 @@ class NasBackupPlugin(
 __plugin_name__         = "NAS Backup"
 __plugin_identifier__   = "nasbackup"
 __plugin_pythoncompat__ = ">=3.7,<4"
-__plugin_version__      = "0.3.5"
+__plugin_version__      = "0.3.6"
 __plugin_description__  = (
-    "Automated OctoPrint backups to a NAS - "
-    "scheduled (daily/weekly/monthly), GFS retention, SMB or local path."
+    "Automated OctoPrint backups to a NAS over SMB - "
+    "scheduled (daily/weekly/monthly), GFS retention."
 )
 __plugin_author__       = "KrX3D"
 __plugin_url__          = "https://github.com/KrX3D/OctoPrint-NASBackup"

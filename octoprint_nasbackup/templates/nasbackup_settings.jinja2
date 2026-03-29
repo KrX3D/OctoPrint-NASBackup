@@ -68,7 +68,7 @@
                 </div>
             </div>
 
-            <div class="control-group" data-bind="visible: scheduleType() === 'weekly'">
+            <div class="control-group">
                 <label class="control-label">Day of week</label>
                 <div class="controls">
                     <select data-bind="value: settings.schedule_day_of_week">
@@ -80,15 +80,16 @@
                         <option value="5">Saturday</option>
                         <option value="6">Sunday</option>
                     </select>
+                    <span class="help-inline muted">Used for weekly schedule.</span>
                 </div>
             </div>
 
-            <div class="control-group" data-bind="visible: scheduleType() === 'monthly'">
+            <div class="control-group">
                 <label class="control-label">Day of month</label>
                 <div class="controls">
                     <input type="number" min="1" max="28" style="width:70px;"
                            data-bind="value: settings.schedule_day_of_month">
-                    <span class="help-inline muted">1-28</span>
+                    <span class="help-inline muted">1-28, used for monthly schedule.</span>
                 </div>
             </div>
 
@@ -133,7 +134,7 @@
         <div class="tab-pane" id="nasbackup_tab_nas">
             <p class="nasbackup-section-heading">SMB Destination</p>
             <p class="muted" style="font-size:12px; margin-bottom:12px;">
-                This plugin now uses SMB only. Please ensure
+                This plugin uses SMB only. Please ensure
                 <code>smbclient</code> is installed on the OctoPrint host.
             </p>
             <div class="control-group">
@@ -489,7 +490,7 @@
                 <!-- ko ifnot: backupRunning -->
                 <button class="btn btn-primary btn-small"
                         data-bind="click: triggerBackup,
-                                   enable: !triggerBusy()">
+                                   enable: !triggerBusy() && smbclientInstalled()">
                     <i class="fas fa-play"></i> Run Backup Now
                 </button>
                 <!-- /ko -->

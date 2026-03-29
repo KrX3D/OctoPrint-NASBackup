@@ -134,6 +134,14 @@ $(function () {
 
         self.triggerBackup = function () {
             if (self.triggerBusy() || self.backupRunning()) { return; }
+            if (!self.smbclientInstalled()) {
+                new PNotify({
+                    title: "NAS Backup",
+                    text: "smbclient is not installed. " + self.smbclientInstallHint(),
+                    type: "error"
+                });
+                return;
+            }
             self.triggerBusy(true);
             OctoPrint.simpleApiCommand("nasbackup", "trigger_backup", {})
                 .done(function (data) {
