@@ -140,3 +140,8 @@ Open OctoPrint → Settings → **NAS Backup**.
 - Added startup backup event filters: cold boot, system restart, and OctoPrint restart.
 - Added startup state persistence to classify restart type and avoid duplicate startup triggers.
 
+### 0.3.15
+- Startup backup options are always visible (enabled/disabled with main startup toggle).
+- Added plugin version display in settings header.
+- Improved SMB retention directory listing by switching to `cd <path>; ls` parsing.
+

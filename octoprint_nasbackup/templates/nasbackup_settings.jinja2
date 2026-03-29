@@ -6,11 +6,9 @@
         <input type="checkbox" id="nasbackup_enabled"
                data-bind="checked: settings.enabled">
         <label for="nasbackup_enabled">Enable NAS Backup Plugin</label>
-        <!-- ko if: !isEnabled() -->
         <span class="muted" style="font-size:11px; font-weight:normal;">
-            (plugin is disabled — no scheduled backups will run)
+            Version: <span data-bind="text: pluginVersion"></span>
         </span>
-        <!-- /ko -->
     </div>
 
     <ul class="nav nav-tabs" id="nasbackup_tabs">
@@ -117,12 +115,11 @@
                 </div>
             </div>
 
-            <!-- ko if: backupOnStartup() -->
             <div class="control-group">
                 <label class="control-label">Delay (seconds)</label>
                 <div class="controls">
                     <input type="number" min="10" max="3600" style="width:80px;"
-                           data-bind="value: settings.startup_delay">
+                           data-bind="value: settings.startup_delay, enable: backupOnStartup()">
                     <span class="help-inline muted">
                         Seconds to wait after OctoPrint starts. Default: 10
                     </span>
@@ -134,22 +131,21 @@
                 <div class="controls">
                     <label class="checkbox">
                         <input type="checkbox"
-                               data-bind="checked: settings.backup_on_startup_cold_boot">
+                               data-bind="checked: settings.backup_on_startup_cold_boot, enable: backupOnStartup()">
                         Fresh cold boot (power on / no recent shutdown marker)
                     </label>
                     <label class="checkbox">
                         <input type="checkbox"
-                               data-bind="checked: settings.backup_on_startup_system_restart">
+                               data-bind="checked: settings.backup_on_startup_system_restart, enable: backupOnStartup()">
                         System restart/reboot (detected graceful restart)
                     </label>
                     <label class="checkbox">
                         <input type="checkbox"
-                               data-bind="checked: settings.backup_on_startup_octoprint_restart">
+                               data-bind="checked: settings.backup_on_startup_octoprint_restart, enable: backupOnStartup()">
                         OctoPrint service restart (same OS boot session)
                     </label>
                 </div>
             </div>
-            <!-- /ko -->
         </div>
 
         <div class="tab-pane" id="nasbackup_tab_nas">

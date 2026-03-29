@@ -274,6 +274,7 @@ class NasBackupPlugin(
             running=self._backup_running,
             last_status=self._last_status,
             next_run=next_run_str,
+            plugin_version=self._plugin_version,
             startup_pending=(
                 self._startup_timer is not None and self._startup_timer.is_alive()
             ),
@@ -911,14 +912,14 @@ class NasBackupPlugin(
             self._smb_exec("mkdir \"{}\"".format(current))
 
     def _smb_list_subdirs(self, remote_path):
-        rc, out, err = self._smb_exec("ls \"{}\"".format(remote_path))
+        rc, out, err = self._smb_exec("cd \"{}\"; ls".format(remote_path))
         dirs = []
         if rc != 0:
             return dirs
         for line in out.splitlines():
-            m = re.match(r"^\s*(.+?)\s{2,}D\s+", line)
+            m = re.match(r"^\s*(\S+)\s+D\s+", line)
             if m:
-                name = m.group(1).strip()
+                name = m.group(1)
                 if name not in (".", ".."):
                     dirs.append(name)
         return dirs
@@ -1141,7 +1142,7 @@ class NasBackupPlugin(
 __plugin_name__         = "NAS Backup"
 __plugin_identifier__   = "nasbackup"
 __plugin_pythoncompat__ = ">=3.7,<4"
-__plugin_version__      = "0.3.14"
+__plugin_version__      = "0.3.15"
 __plugin_description__  = (
     "Automated OctoPrint backups to a NAS over SMB - "
     "scheduled (daily/weekly/monthly), GFS retention."

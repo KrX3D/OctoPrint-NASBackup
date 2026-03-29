@@ -23,6 +23,7 @@ $(function () {
         self.testBusy    = ko.observable(false);
         self.smbclientInstalled   = ko.observable(true);
         self.smbclientInstallHint = ko.observable("sudo apt install smbclient");
+        self.pluginVersion = ko.observable("?");
 
         // settings is set in onBeforeBinding — null until then.
         // NEVER call settings.xxx() directly in data-bind attributes.
@@ -33,7 +34,10 @@ $(function () {
         // These return a safe default if settings is not yet loaded.
 
         self.isEnabled = ko.computed(function () {
-            try { return self.settings && self.settings.enabled(); }
+            try {
+                var v = self.settings && self.settings.enabled();
+                return v === true || v === "true" || v === 1 || v === "1";
+            }
             catch (e) { return false; }
         });
 
@@ -51,7 +55,10 @@ $(function () {
         });
 
         self.backupOnStartup = ko.computed(function () {
-            try { return self.settings && self.settings.backup_on_startup(); }
+            try {
+                var v = self.settings && self.settings.backup_on_startup();
+                return v === true || v === "true" || v === 1 || v === "1";
+            }
             catch (e) { return false; }
         });
 
@@ -158,6 +165,7 @@ $(function () {
                         status: "never", message: "", time: null
                     });
                     self.nextRun(data.next_run || null);
+                    self.pluginVersion(data.plugin_version || "?");
                     self.smbclientInstalled(data.smbclient_installed === true);
                     self.smbclientInstallHint(data.smbclient_install_hint || "sudo apt install smbclient");
                     if (Array.isArray(data.logs)) {
