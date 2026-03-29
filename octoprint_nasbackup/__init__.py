@@ -1037,6 +1037,15 @@ class NasBackupPlugin(
             "message": message,
             "time":    datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         }
+        self._plugin_manager.send_plugin_message(
+            self._identifier,
+            {
+                "event": "backup_status",
+                "status": self._last_status["status"],
+                "message": self._last_status["message"],
+                "time": self._last_status["time"],
+            },
+        )
 
 
 # ── Plugin registration ───────────────────────────────────────────────────────
@@ -1044,7 +1053,7 @@ class NasBackupPlugin(
 __plugin_name__         = "NAS Backup"
 __plugin_identifier__   = "nasbackup"
 __plugin_pythoncompat__ = ">=3.7,<4"
-__plugin_version__      = "0.3.7"
+__plugin_version__      = "0.3.8"
 __plugin_description__  = (
     "Automated OctoPrint backups to a NAS over SMB - "
     "scheduled (daily/weekly/monthly), GFS retention."

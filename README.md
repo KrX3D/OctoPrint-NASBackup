@@ -109,3 +109,7 @@ Open OctoPrint → Settings → **NAS Backup**.
 - Added early smbclient prerequisite check before backup steps.
 - Improved OctoPrint backup trigger call to avoid permission wrapper identity errors.
 
+### 0.3.8
+- Added user notifications for backup status updates (success/failed/skipped).
+- Test connection now reports via notification popups instead of inline result rows.
+

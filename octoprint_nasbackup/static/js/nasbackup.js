@@ -21,7 +21,6 @@ $(function () {
 
         self.triggerBusy = ko.observable(false);
         self.testBusy    = ko.observable(false);
-        self.testResult  = ko.observable(null);
         self.smbclientInstalled   = ko.observable(true);
         self.smbclientInstallHint = ko.observable("sudo apt install smbclient");
 
@@ -92,7 +91,6 @@ $(function () {
 
         self.onSettingsShown = function () {
             self.testBusy(false);
-            self.testResult(null);
             self.triggerBusy(false);
             self.refreshStatus();
 
@@ -117,6 +115,23 @@ $(function () {
                     title: "NAS Backup",
                     text: "Scheduled backup started.",
                     type: "info",
+                    hide: true
+                });
+                self.refreshStatus();
+                return;
+            }
+            if (data.event === "backup_status") {
+                var typeMap = {
+                    success: "success",
+                    failed: "error",
+                    skipped: "notice",
+                    running: "info",
+                    never: "info"
+                };
+                new PNotify({
+                    title: "NAS Backup",
+                    text: (data.status || "status") + ": " + (data.message || ""),
+                    type: typeMap[data.status] || "info",
                     hide: true
                 });
                 self.refreshStatus();
@@ -181,13 +196,20 @@ $(function () {
         self.testConnection = function () {
             if (self.testBusy()) { return; }
             self.testBusy(true);
-            self.testResult(null);
             OctoPrint.simpleApiCommand("nasbackup", "test_connection", {})
-                .done(function (data) { self.testResult(data); })
+                .done(function (data) {
+                    new PNotify({
+                        title: "NAS Backup",
+                        text: data.message || "Connection test finished.",
+                        type: data.success ? "success" : "error",
+                        hide: true
+                    });
+                })
                 .fail(function () {
-                    self.testResult({
-                        success: false,
-                        message: "Request to OctoPrint failed."
+                    new PNotify({
+                        title: "NAS Backup",
+                        text: "Request to OctoPrint failed.",
+                        type: "error"
                     });
                 })
                 .always(function () { self.testBusy(false); });
