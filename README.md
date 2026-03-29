@@ -113,3 +113,8 @@ Open OctoPrint → Settings → **NAS Backup**.
 - Added user notifications for backup status updates (success/failed/skipped).
 - Test connection now reports via notification popups instead of inline result rows.
 
+### 0.3.9
+- Improved schedule button highlighting so selected type is visually clear.
+- Reduced noisy blank spacer log lines in backup output.
+- Made backup-plugin create call signature-compatible across OctoPrint versions.
+

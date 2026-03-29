@@ -475,7 +475,6 @@ class NasBackupPlugin(
             self._log("Transfer mode : {}".format(transfer_mode))
 
             # Step 1
-            self._log("")
             self._log("Step 1/4 — Creating OctoPrint backup ZIP...")
             zip_path = self._trigger_octoprint_backup()
             self._log("ZIP created : {} ({:.1f} MB)".format(
@@ -484,7 +483,6 @@ class NasBackupPlugin(
             ))
 
             # Step 2
-            self._log("")
             self._log("Step 2/4 — Transferring to NAS...")
             if transfer_mode == "smbclient":
                 self._transfer_smbclient(zip_path, server_name, timestamp)
@@ -492,20 +490,17 @@ class NasBackupPlugin(
                 raise RuntimeError("Unknown transfer_mode: '{}'".format(transfer_mode))
 
             # Step 3
-            self._log("")
             self._log("Step 3/4 — Pruning local OctoPrint ZIPs...")
             self._prune_local_zips()
 
             # Step 4
             if self._get_bool("retention_enabled"):
-                self._log("")
                 self._log("Step 4/4 — Applying GFS retention on NAS...")
                 self._apply_retention(server_name, transfer_mode)
             else:
                 self._log("Step 4/4 — Retention disabled, skipping.")
 
             elapsed = int((datetime.datetime.now() - start_time).total_seconds())
-            self._log("")
             self._log("=" * 60)
             self._log("Backup completed successfully in {}s.".format(elapsed))
             self._log("=" * 60)
@@ -544,10 +539,26 @@ class NasBackupPlugin(
             from octoprint.server import app as octoprint_app
             with octoprint_app.app_context():
                 create_backup = inspect.unwrap(backup_plugin.implementation.create_backup)
+                sig = inspect.signature(create_backup)
+                accepts_exclude = "exclude" in sig.parameters
+                accepts_excludes = "excludes" in sig.parameters
+
+                kwargs = {}
+                if excludes:
+                    if accepts_exclude:
+                        kwargs["exclude"] = excludes
+                    elif accepts_excludes:
+                        kwargs["excludes"] = excludes
+                    else:
+                        self._log(
+                            "  Backup plugin does not accept exclude list, continuing without excludes.",
+                            "WARNING"
+                        )
+
                 if getattr(create_backup, "__self__", None) is backup_plugin.implementation:
-                    result = create_backup(exclude=excludes)
+                    result = create_backup(**kwargs)
                 else:
-                    result = create_backup(backup_plugin.implementation, exclude=excludes)
+                    result = create_backup(backup_plugin.implementation, **kwargs)
         except Exception as exc:
             raise RuntimeError("OctoPrint backup plugin raised: {}".format(exc))
 
@@ -1053,7 +1064,7 @@ class NasBackupPlugin(
 __plugin_name__         = "NAS Backup"
 __plugin_identifier__   = "nasbackup"
 __plugin_pythoncompat__ = ">=3.7,<4"
-__plugin_version__      = "0.3.8"
+__plugin_version__      = "0.3.9"
 __plugin_description__  = (
     "Automated OctoPrint backups to a NAS over SMB - "
     "scheduled (daily/weekly/monthly), GFS retention."

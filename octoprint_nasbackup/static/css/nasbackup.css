@@ -73,3 +73,14 @@
     margin: 0;
     cursor: pointer;
 }
+
+#settings_plugin_nasbackup .nasbackup-schedule-group .btn {
+    border-color: #b9c7da;
+}
+
+#settings_plugin_nasbackup .nasbackup-schedule-group .btn.active,
+#settings_plugin_nasbackup .nasbackup-schedule-group .btn:focus {
+    background: #2f6fad;
+    color: #fff;
+    border-color: #275a8c;
+}
