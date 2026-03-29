@@ -96,3 +96,17 @@ Open OctoPrint → Settings → **NAS Backup**.
 
 ### 0.1.0
 - Initial release
+
+### 0.3.3
+- Fix settings UI script filename so Knockout bindings and API actions load correctly.
+- Improve log panel contrast/readability in the Status tab.
+
+### 0.3.4
+- Reworked the settings UI so schedule and retention controls are reliably visible.
+- Simplified plugin behavior to SMB-only backups and improved SMB dependency messaging.
+
+### 0.3.5
+- Added smbclient dependency status + optional auto-install attempt from the NAS tab.
+- Fixed retention fields so they stay editable when pruning is enabled.
+- Manual backup button is now clickable whenever no backup is currently running.
+
