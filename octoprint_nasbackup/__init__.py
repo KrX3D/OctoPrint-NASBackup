@@ -820,6 +820,7 @@ class NasBackupPlugin(
 
         now     = datetime.datetime.now()
         to_keep = set()
+        seen_daily = set()
         seen_wk = set()
         seen_mo = set()
         seen_yr = set()
@@ -842,25 +843,39 @@ class NasBackupPlugin(
 
         for dt, name in parsed:
             age_days = (now - dt).days
+            if age_days < 0:
+                age_days = 0
+
+            # Daily: keep newest snapshot per calendar day.
             if age_days < keep_daily:
-                to_keep.add(name); continue
+                key = dt.strftime("%Y-%m-%d")
+                if key not in seen_daily:
+                    seen_daily.add(key)
+                    to_keep.add(name)
+                continue
+
             age_weeks = age_days // 7
             if age_weeks < keep_weekly:
                 key = "{}-W{:02d}".format(*dt.isocalendar()[:2])
                 if key not in seen_wk:
-                    seen_wk.add(key); to_keep.add(name)
+                    seen_wk.add(key)
+                    to_keep.add(name)
                 continue
+
             age_months = age_days // 30
             if age_months < keep_monthly:
                 key = "{}-{:02d}".format(dt.year, dt.month)
                 if key not in seen_mo:
-                    seen_mo.add(key); to_keep.add(name)
+                    seen_mo.add(key)
+                    to_keep.add(name)
                 continue
+
             age_years = age_days // 365
             if age_years < keep_yearly:
                 key = str(dt.year)
                 if key not in seen_yr:
-                    seen_yr.add(key); to_keep.add(name)
+                    seen_yr.add(key)
+                    to_keep.add(name)
                 continue
 
         return {name for _, name in parsed} - to_keep
@@ -1142,7 +1157,7 @@ class NasBackupPlugin(
 __plugin_name__         = "NAS Backup"
 __plugin_identifier__   = "nasbackup"
 __plugin_pythoncompat__ = ">=3.7,<4"
-__plugin_version__      = "0.3.15"
+__plugin_version__      = "0.3.16"
 __plugin_description__  = (
     "Automated OctoPrint backups to a NAS over SMB - "
     "scheduled (daily/weekly/monthly), GFS retention."

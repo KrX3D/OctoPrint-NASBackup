@@ -145,3 +145,7 @@ Open OctoPrint → Settings → **NAS Backup**.
 - Added plugin version display in settings header.
 - Improved SMB retention directory listing by switching to `cd <path>; ls` parsing.
 
+### 0.3.16
+- Startup delay and startup-type options are now always editable in UI.
+- Fixed daily retention behavior to keep only the newest snapshot per day window.
+
