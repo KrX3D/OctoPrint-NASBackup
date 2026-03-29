@@ -22,6 +22,8 @@ $(function () {
         self.triggerBusy = ko.observable(false);
         self.testBusy    = ko.observable(false);
         self.testResult  = ko.observable(null);
+        self.smbclientInstalled   = ko.observable(true);
+        self.smbclientInstallHint = ko.observable("sudo apt install smbclient");
 
         // settings is set in onBeforeBinding — null until then.
         // NEVER call settings.xxx() directly in data-bind attributes.
@@ -108,6 +110,19 @@ $(function () {
             }
         };
 
+        self.onDataUpdaterPluginMessage = function (plugin, data) {
+            if (plugin !== "nasbackup" || !data || !data.event) { return; }
+            if (data.event === "scheduled_backup_started") {
+                new PNotify({
+                    title: "NAS Backup",
+                    text: "Scheduled backup started.",
+                    type: "info",
+                    hide: true
+                });
+                self.refreshStatus();
+            }
+        };
+
         // ── API ───────────────────────────────────────────────────────
 
         self.refreshStatus = function () {
@@ -119,6 +134,8 @@ $(function () {
                         status: "never", message: "", time: null
                     });
                     self.nextRun(data.next_run || null);
+                    self.smbclientInstalled(data.smbclient_installed === true);
+                    self.smbclientInstallHint(data.smbclient_install_hint || "sudo apt install smbclient");
                     if (Array.isArray(data.logs)) {
                         self.logs(data.logs);
                         var el = document.getElementById("nasbackup_log_area");
@@ -129,6 +146,14 @@ $(function () {
 
         self.triggerBackup = function () {
             if (self.triggerBusy() || self.backupRunning()) { return; }
+            if (!self.smbclientInstalled()) {
+                new PNotify({
+                    title: "NAS Backup",
+                    text: "smbclient is not installed. " + self.smbclientInstallHint(),
+                    type: "error"
+                });
+                return;
+            }
             self.triggerBusy(true);
             OctoPrint.simpleApiCommand("nasbackup", "trigger_backup", {})
                 .done(function (data) {
