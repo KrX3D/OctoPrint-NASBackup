@@ -60,6 +60,45 @@ Open OctoPrint → Settings → **NAS Backup**.
 | **Retention** | GFS: how many daily/weekly/monthly/yearly snapshots to keep |
 | **Status** | Last result, next scheduled run, manual trigger, live log |
 
+### Default option values
+
+The plugin ships with these defaults (from `get_settings_defaults()`):
+
+| Option | Default |
+|---|---|
+| `enabled` | `true` |
+| `schedule_type` | `daily` |
+| `schedule_time` | `03:00` |
+| `schedule_day_of_week` | `0` (Monday) |
+| `schedule_day_of_month` | `1` |
+| `only_when_idle` | `true` |
+| `backup_on_startup` | `false` |
+| `startup_delay` | `10` seconds |
+| `backup_on_startup_cold_boot` | `true` |
+| `backup_on_startup_system_restart` | `true` |
+| `backup_on_startup_octoprint_restart` | `true` |
+| `transfer_mode` | `smbclient` |
+| `smb_host` | `192.168.1.11` |
+| `smb_share` | `backup` |
+| `smb_subdir` | `OctoPrint` |
+| `smb_username` | empty |
+| `smb_password` | empty |
+| `smb_domain` | empty |
+| `smb_version` | `3.0` |
+| `exclude_uploads` | `false` |
+| `exclude_timelapse` | `true` |
+| `local_keep_count` | `5` |
+| `system_backup_enabled` | `false` |
+| `system_backup_items` | `/etc/fstab`, `/etc/hostname`, `/etc/hosts`, `/home/pi/.octoprint/config.yaml`, `/etc/crontab` |
+| `retention_enabled` | `true` |
+| `keep_daily` | `7` |
+| `keep_weekly` | `8` |
+| `keep_monthly` | `12` |
+| `keep_yearly` | `5` |
+| `server_name_auto` | `"true"` |
+| `server_name_manual` | `OctoPrint` |
+| `copy_log_to_nas` | `false` |
+
 ---
 
 ## NAS Directory Layout
@@ -148,4 +187,3 @@ Open OctoPrint → Settings → **NAS Backup**.
 ### 0.3.16
 - Startup delay and startup-type options are now always editable in UI.
 - Fixed daily retention behavior to keep only the newest snapshot per day window.
-
