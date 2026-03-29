@@ -118,3 +118,8 @@ Open OctoPrint → Settings → **NAS Backup**.
 - Reduced noisy blank spacer log lines in backup output.
 - Made backup-plugin create call signature-compatible across OctoPrint versions.
 
+### 0.3.10
+- Switched backup ZIP triggering to use OctoPrint backup helper API (avoids request-context crashes).
+- Retried backup helper call without excludes when helper signature does not support exclude arg.
+- Reduced visual blank lines in log viewer rendering.
+

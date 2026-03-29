@@ -24,9 +24,14 @@
     border-radius: 4px;
     max-height: 280px;
     overflow-y: auto;
-    white-space: pre-wrap;
+    white-space: normal;
     word-break: break-all;
     border: 1px solid #d5d9e0;
+}
+
+#settings_plugin_nasbackup .nasbackup-log .log-line {
+    white-space: pre-wrap;
+    margin: 0;
 }
 
 #settings_plugin_nasbackup .nasbackup-log .log-error   { color: #f48771; }

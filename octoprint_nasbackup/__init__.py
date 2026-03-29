@@ -516,11 +516,12 @@ class NasBackupPlugin(
     # ── Step 1 ────────────────────────────────────────────────────────────────
 
     def _trigger_octoprint_backup(self):
-        backup_plugin = self._plugin_manager.get_plugin_info("backup")
-        if not backup_plugin:
+        backup_helpers = self._plugin_manager.get_helpers("backup", "create_backup")
+        if not backup_helpers or "create_backup" not in backup_helpers:
             raise RuntimeError(
-                "OctoPrint backup plugin not found — make sure it is enabled."
+                "OctoPrint backup helper not found — make sure bundled backup plugin is enabled."
             )
+        create_backup = backup_helpers["create_backup"]
 
         excludes = []
         if self._get_bool("exclude_uploads"):
@@ -535,30 +536,18 @@ class NasBackupPlugin(
         before = set(glob.glob(os.path.join(backup_dir, "*.zip")))
 
         try:
-            import inspect
-            from octoprint.server import app as octoprint_app
-            with octoprint_app.app_context():
-                create_backup = inspect.unwrap(backup_plugin.implementation.create_backup)
-                sig = inspect.signature(create_backup)
-                accepts_exclude = "exclude" in sig.parameters
-                accepts_excludes = "excludes" in sig.parameters
-
-                kwargs = {}
+            kwargs = {}
+            if excludes:
+                kwargs["exclude"] = excludes
+            try:
+                result = create_backup(**kwargs)
+            except TypeError:
                 if excludes:
-                    if accepts_exclude:
-                        kwargs["exclude"] = excludes
-                    elif accepts_excludes:
-                        kwargs["excludes"] = excludes
-                    else:
-                        self._log(
-                            "  Backup plugin does not accept exclude list, continuing without excludes.",
-                            "WARNING"
-                        )
-
-                if getattr(create_backup, "__self__", None) is backup_plugin.implementation:
-                    result = create_backup(**kwargs)
-                else:
-                    result = create_backup(backup_plugin.implementation, **kwargs)
+                    self._log(
+                        "  Backup helper exclude arg unsupported, retrying without excludes.",
+                        "WARNING"
+                    )
+                result = create_backup()
         except Exception as exc:
             raise RuntimeError("OctoPrint backup plugin raised: {}".format(exc))
 
@@ -1064,7 +1053,7 @@ class NasBackupPlugin(
 __plugin_name__         = "NAS Backup"
 __plugin_identifier__   = "nasbackup"
 __plugin_pythoncompat__ = ">=3.7,<4"
-__plugin_version__      = "0.3.9"
+__plugin_version__      = "0.3.10"
 __plugin_description__  = (
     "Automated OctoPrint backups to a NAS over SMB - "
     "scheduled (daily/weekly/monthly), GFS retention."

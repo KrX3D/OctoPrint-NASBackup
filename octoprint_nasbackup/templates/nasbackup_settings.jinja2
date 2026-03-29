@@ -489,7 +489,7 @@
             <!-- ko if: logs().length > 0 -->
             <div id="nasbackup_log_area" class="nasbackup-log"
                  data-bind="foreach: logs">
-                <div data-bind="text: $data, css: $parent.logLineClass($data)"></div>
+                <div class="log-line" data-bind="text: $data, css: $parent.logLineClass($data)"></div>
             </div>
             <!-- /ko -->
             <!-- ko if: logs().length === 0 -->
