@@ -13,6 +13,7 @@ import socket
 import subprocess
 import tempfile
 import threading
+import time
 import traceback
 from collections import deque
 
@@ -60,7 +61,7 @@ class NasBackupPlugin(
             backup_on_startup=False,
             startup_delay=120,
             # Transfer
-            transfer_mode="local",
+            transfer_mode="smbclient",
             local_path="/mnt/octoprint_backup",
             # SMB
             smb_host="192.168.1.11",
@@ -103,6 +104,7 @@ class NasBackupPlugin(
         old_stime    = self._settings.get(["schedule_time"])
 
         octoprint.plugin.SettingsPlugin.on_settings_save(self, data)
+        self._force_smb_mode()
 
         new_enabled  = self._get_bool("enabled")
         new_stype    = self._settings.get(["schedule_type"])
@@ -158,6 +160,7 @@ class NasBackupPlugin(
     # ── StartupPlugin ─────────────────────────────────────────────────────────
 
     def on_after_startup(self):
+        self._force_smb_mode()
         self._plugin_log(
             "NAS Backup plugin started (v{})".format(self._plugin_version)
         )
@@ -183,7 +186,9 @@ class NasBackupPlugin(
         # Startup backup
         if enabled and backup_on_start:
             self._plugin_log("Startup backup armed — will fire in {}s.".format(delay))
-            self._startup_timer = threading.Timer(delay, self._run_backup)
+            self._startup_timer = threading.Timer(
+                delay, lambda: self._run_backup(source="startup")
+            )
             self._startup_timer.daemon = True
             self._startup_timer.start()
         else:
@@ -204,7 +209,11 @@ class NasBackupPlugin(
     # ── SimpleApiPlugin ───────────────────────────────────────────────────────
 
     def get_api_commands(self):
-        return dict(trigger_backup=[], test_connection=[], clear_logs=[])
+        return dict(
+            trigger_backup=[],
+            test_connection=[],
+            clear_logs=[],
+        )
 
     def on_api_command(self, command, data):
         self._plugin_log("API command received: {}".format(command))
@@ -217,7 +226,9 @@ class NasBackupPlugin(
                     "message": "A backup is already running."
                 }), 409
             t = threading.Thread(
-                target=self._run_backup, name="nasbackup-thread", daemon=True
+                target=lambda: self._run_backup(source="manual"),
+                name="nasbackup-thread",
+                daemon=True
             )
             t.start()
             return flask.jsonify({"success": True, "message": "Backup started."})
@@ -230,7 +241,6 @@ class NasBackupPlugin(
         elif command == "clear_logs":
             self._log_entries.clear()
             return flask.jsonify({"success": True})
-
         return flask.abort(400)
 
     def on_api_get(self, request):
@@ -248,6 +258,8 @@ class NasBackupPlugin(
             startup_pending=(
                 self._startup_timer is not None and self._startup_timer.is_alive()
             ),
+            smbclient_installed=bool(shutil.which("smbclient")),
+            smbclient_install_hint=self._suggest_install_command(),
             logs=list(self._log_entries),
         ))
 
@@ -317,7 +329,10 @@ class NasBackupPlugin(
 
             # Fire backup
             self._plugin_log("Scheduled backup firing now.")
-            self._run_backup()
+            self._plugin_manager.send_plugin_message(
+                self._identifier, {"event": "scheduled_backup_started"}
+            )
+            self._run_backup(source="scheduled")
 
             # Calculate next run
             next_run = self._calc_next_run()
@@ -411,7 +426,7 @@ class NasBackupPlugin(
 
     # ── Core backup orchestration ─────────────────────────────────────────────
 
-    def _run_backup(self):
+    def _run_backup(self, source="manual"):
         acquired = self._backup_lock.acquire(blocking=False)
         if not acquired:
             self._plugin_log("Could not acquire backup lock — already running.")
@@ -429,6 +444,7 @@ class NasBackupPlugin(
             self._log("=" * 60)
             self._log("NAS Backup started  [{} v{}]".format(
                 socket.gethostname(), self._plugin_version))
+            self._log("Trigger       : {}".format(source))
             self._log("Timestamp     : {}".format(timestamp))
             self._log("Plugin enabled: {}".format(self._get_bool("enabled")))
             self._log("Transfer mode : {}".format(self._settings.get(["transfer_mode"])))
@@ -437,6 +453,12 @@ class NasBackupPlugin(
             if not self._get_bool("enabled"):
                 self._log("Plugin is disabled — aborting.", "WARNING")
                 self._set_status("skipped", "Skipped — plugin disabled.")
+                return
+
+            if not shutil.which("smbclient"):
+                hint = self._suggest_install_command()
+                self._log("smbclient missing — cannot run backup.", "ERROR")
+                self._set_status("failed", "smbclient missing. {}".format(hint))
                 return
 
             if self._get_bool("only_when_idle"):
@@ -449,12 +471,11 @@ class NasBackupPlugin(
                     return
 
             server_name   = self._get_server_name()
-            transfer_mode = self._settings.get(["transfer_mode"])
+            transfer_mode = self._get_transfer_mode()
             self._log("Server name   : {}".format(server_name))
             self._log("Transfer mode : {}".format(transfer_mode))
 
             # Step 1
-            self._log("")
             self._log("Step 1/4 — Creating OctoPrint backup ZIP...")
             zip_path = self._trigger_octoprint_backup()
             self._log("ZIP created : {} ({:.1f} MB)".format(
@@ -463,33 +484,31 @@ class NasBackupPlugin(
             ))
 
             # Step 2
-            self._log("")
             self._log("Step 2/4 — Transferring to NAS...")
-            if transfer_mode == "local":
-                self._transfer_local(zip_path, server_name, timestamp)
-            elif transfer_mode == "smbclient":
-                self._transfer_smbclient(zip_path, server_name, timestamp)
+            if transfer_mode == "smbclient":
+                destination = self._transfer_smbclient(zip_path, server_name, timestamp)
             else:
                 raise RuntimeError("Unknown transfer_mode: '{}'".format(transfer_mode))
 
             # Step 3
-            self._log("")
             self._log("Step 3/4 — Pruning local OctoPrint ZIPs...")
             self._prune_local_zips()
 
             # Step 4
             if self._get_bool("retention_enabled"):
-                self._log("")
                 self._log("Step 4/4 — Applying GFS retention on NAS...")
                 self._apply_retention(server_name, transfer_mode)
             else:
                 self._log("Step 4/4 — Retention disabled, skipping.")
 
             elapsed = int((datetime.datetime.now() - start_time).total_seconds())
-            self._log("")
             self._log("=" * 60)
             self._log("Backup completed successfully in {}s.".format(elapsed))
             self._log("=" * 60)
+
+            if self._get_bool("copy_log_to_nas"):
+                self._copy_log_to_destination(destination)
+
             self._set_status("success", "Completed in {}s.".format(elapsed))
 
         except Exception as exc:
@@ -502,11 +521,12 @@ class NasBackupPlugin(
     # ── Step 1 ────────────────────────────────────────────────────────────────
 
     def _trigger_octoprint_backup(self):
-        backup_plugin = self._plugin_manager.get_plugin_info("backup")
-        if not backup_plugin:
+        backup_helpers = self._plugin_manager.get_helpers("backup", "create_backup")
+        if not backup_helpers or "create_backup" not in backup_helpers:
             raise RuntimeError(
-                "OctoPrint backup plugin not found — make sure it is enabled."
+                "OctoPrint backup helper not found — make sure bundled backup plugin is enabled."
             )
+        create_backup = backup_helpers["create_backup"]
 
         excludes = []
         if self._get_bool("exclude_uploads"):
@@ -519,30 +539,42 @@ class NasBackupPlugin(
         backup_dir = self._get_octoprint_backup_dir()
         os.makedirs(backup_dir, exist_ok=True)
         before = set(glob.glob(os.path.join(backup_dir, "*.zip")))
+        trigger_ts = time.time()
 
         try:
-            result = backup_plugin.implementation.create_backup(exclude=excludes)
+            kwargs = {}
+            if excludes:
+                kwargs["exclude"] = excludes
+            try:
+                result = create_backup(**kwargs)
+            except TypeError:
+                if excludes:
+                    self._log(
+                        "  Backup helper exclude arg unsupported, retrying without excludes.",
+                        "WARNING"
+                    )
+                result = create_backup()
         except Exception as exc:
             raise RuntimeError("OctoPrint backup plugin raised: {}".format(exc))
 
         if result and isinstance(result, str) and os.path.isfile(result):
             return result
 
-        after   = set(glob.glob(os.path.join(backup_dir, "*.zip")))
-        new_zip = after - before
-        if new_zip:
-            return max(new_zip, key=os.path.getmtime)
+        # Some OctoPrint versions create backups asynchronously; wait for a new ZIP.
+        deadline = time.time() + 180
+        while time.time() < deadline:
+            after   = set(glob.glob(os.path.join(backup_dir, "*.zip")))
+            new_zip = after - before
+            if new_zip:
+                return max(new_zip, key=os.path.getmtime)
 
-        all_zips = sorted(
-            glob.glob(os.path.join(backup_dir, "*.zip")),
-            key=os.path.getmtime, reverse=True
-        )
-        if all_zips:
-            age = (datetime.datetime.now() -
-                   datetime.datetime.fromtimestamp(
-                       os.path.getmtime(all_zips[0]))).total_seconds()
-            if age < 120:
+            all_zips = sorted(
+                glob.glob(os.path.join(backup_dir, "*.zip")),
+                key=os.path.getmtime, reverse=True
+            )
+            if all_zips and os.path.getmtime(all_zips[0]) >= trigger_ts - 1:
                 return all_zips[0]
+            time.sleep(2)
 
         raise RuntimeError("No new backup ZIP detected after triggering OctoPrint backup.")
 
@@ -552,7 +584,7 @@ class NasBackupPlugin(
         base     = self._resolve_vars(
             self._settings.get(["local_path"]) or "/mnt/octoprint_backup"
         )
-        snap_dir = os.path.join(base, server_name, "snapshots", timestamp)
+        snap_dir = os.path.join(base, server_name, timestamp)
         self._log("  Local snap dir: {}".format(snap_dir))
         os.makedirs(snap_dir, exist_ok=True)
 
@@ -562,9 +594,6 @@ class NasBackupPlugin(
 
         if self._get_bool("system_backup_enabled"):
             self._backup_system_files_local(snap_dir)
-        if self._get_bool("copy_log_to_nas"):
-            self._write_log_file(os.path.join(snap_dir, "backup.log"))
-
         self._write_metadata_file(
             os.path.join(snap_dir, "_backup_info.txt"),
             zip_path, timestamp, server_name
@@ -582,6 +611,7 @@ class NasBackupPlugin(
             self._log("  Could not update 'latest' symlink: {}".format(exc), "WARNING")
 
         self._log("  Local transfer complete.")
+        return {"mode": "local", "path": snap_dir}
 
     def _backup_system_files_local(self, snap_dir):
         items   = self._get_system_items()
@@ -615,7 +645,7 @@ class NasBackupPlugin(
         subdir      = self._resolve_vars(
             self._settings.get(["smb_subdir"]) or "OctoPrint"
         )
-        remote_snap = "{}/{}/snapshots/{}".format(subdir, server_name, timestamp)
+        remote_snap = "{}/{}/{}".format(subdir, server_name, timestamp)
         self._log("  Remote snap path: {}".format(remote_snap))
 
         self._smb_mkdir_p(remote_snap)
@@ -631,13 +661,6 @@ class NasBackupPlugin(
 
         if self._get_bool("system_backup_enabled"):
             self._backup_system_files_smbclient(remote_snap)
-        if self._get_bool("copy_log_to_nas"):
-            self._upload_temp_file_smbclient(
-                lambda f: self._write_log_file(f),
-                "{}/backup.log".format(remote_snap),
-                suffix=".log",
-            )
-
         meta = self._build_metadata_text(zip_path, timestamp, server_name)
         self._upload_temp_file_smbclient(
             lambda f: open(f, "w").write(meta) or None,
@@ -645,6 +668,23 @@ class NasBackupPlugin(
             suffix=".txt",
         )
         self._log("  SMB transfer complete.")
+        return {"mode": "smbclient", "path": remote_snap}
+
+    def _copy_log_to_destination(self, destination):
+        if not destination:
+            return
+        if destination.get("mode") == "local":
+            self._write_log_file(os.path.join(destination["path"], "backup.log"))
+            self._log("  Final log copied to local snapshot.")
+            return
+        if destination.get("mode") == "smbclient":
+            self._upload_temp_file_smbclient(
+                lambda f: self._write_log_file(f),
+                "{}/backup.log".format(destination["path"]),
+                suffix=".log",
+            )
+            self._log("  Final log uploaded to SMB snapshot.")
+            return
 
     def _backup_system_files_smbclient(self, remote_snap):
         items    = self._get_system_items()
@@ -717,7 +757,7 @@ class NasBackupPlugin(
             base      = self._resolve_vars(
                 self._settings.get(["local_path"]) or "/mnt/octoprint_backup"
             )
-            snap_base = os.path.join(base, server_name, "snapshots")
+            snap_base = os.path.join(base, server_name)
             if not os.path.isdir(snap_base):
                 self._log("  Snapshot dir not found: {}".format(snap_base))
                 return
@@ -737,7 +777,7 @@ class NasBackupPlugin(
             subdir           = self._resolve_vars(
                 self._settings.get(["smb_subdir"]) or "OctoPrint"
             )
-            remote_snap_base = "{}/{}/snapshots".format(subdir, server_name)
+            remote_snap_base = "{}/{}".format(subdir, server_name)
             snapshots        = self._smb_list_subdirs(remote_snap_base)
             self._log("  Found {} remote snapshot(s).".format(len(snapshots)))
             to_delete = self._gfs_calculate_deletions(snapshots)
@@ -857,53 +897,37 @@ class NasBackupPlugin(
         if rc != 0:
             return dirs
         for line in out.splitlines():
-            m = re.match(r"^\s+(\S+)\s+D\s+", line)
-            if m and m.group(1) not in (".", ".."):
-                dirs.append(m.group(1))
+            m = re.match(r"^\s*(.+?)\s{2,}D\s+", line)
+            if m:
+                name = m.group(1).strip()
+                if name not in (".", ".."):
+                    dirs.append(name)
         return dirs
 
     # ── Test connection ───────────────────────────────────────────────────────
 
     def _test_connection(self):
-        mode = self._settings.get(["transfer_mode"])
-        self._plugin_log("Test connection: mode={}".format(mode))
-
-        if mode == "local":
-            path = self._resolve_vars(
-                self._settings.get(["local_path"]) or "/mnt/octoprint_backup"
+        self._plugin_log("Test connection: mode=smbclient")
+        if not shutil.which("smbclient"):
+            return {
+                "success": False,
+                "message": (
+                    "smbclient is required on the OctoPrint host. "
+                    "Install with: {}".format(self._suggest_install_command())
+                ),
+            }
+        self._plugin_log(
+            "Test SMB: host={} share={}".format(
+                self._settings.get(["smb_host"]),
+                self._settings.get(["smb_share"]),
             )
-            self._plugin_log("Test local path: {}".format(path))
-            if not os.path.isdir(path):
-                return {"success": False,
-                        "message": "Path does not exist: {}".format(path)}
-            test = os.path.join(path, ".nasbackup_writetest")
-            try:
-                with open(test, "w") as f:
-                    f.write("ok")
-                os.unlink(test)
-                return {"success": True,
-                        "message": "Path accessible and writable: {}".format(path)}
-            except Exception as exc:
-                return {"success": False, "message": "Not writable: {}".format(exc)}
-
-        elif mode == "smbclient":
-            if not shutil.which("smbclient"):
-                return {"success": False,
-                        "message": "smbclient not found — sudo apt install smbclient"}
-            self._plugin_log(
-                "Test SMB: host={} share={}".format(
-                    self._settings.get(["smb_host"]),
-                    self._settings.get(["smb_share"]),
-                )
-            )
-            rc, out, err = self._smb_exec("ls")
-            self._plugin_log("SMB test result: rc={} err={}".format(rc, err.strip()[:100]))
-            if rc == 0:
-                return {"success": True, "message": "SMB connection successful."}
-            detail = (err or out or "unknown error").strip().splitlines()[0]
-            return {"success": False, "message": "SMB failed: {}".format(detail)}
-
-        return {"success": False, "message": "Unknown transfer mode: {}".format(mode)}
+        )
+        rc, out, err = self._smb_exec("ls")
+        self._plugin_log("SMB test result: rc={} err={}".format(rc, err.strip()[:100]))
+        if rc == 0:
+            return {"success": True, "message": "SMB connection successful."}
+        detail = (err or out or "unknown error").strip().splitlines()[0]
+        return {"success": False, "message": "SMB failed: {}".format(detail)}
 
     # ── Utility helpers ───────────────────────────────────────────────────────
 
@@ -930,6 +954,30 @@ class NasBackupPlugin(
         name = self._settings.get(["server_name_manual"]) or "OctoPrint"
         self._log("  Using manual server name: {}".format(name))
         return self._sanitize_name(name)
+
+    def _force_smb_mode(self):
+        mode = self._settings.get(["transfer_mode"])
+        if mode != "smbclient":
+            self._settings.set(["transfer_mode"], "smbclient")
+            self._settings.save()
+            self._plugin_log("Migrated transfer_mode '{}' -> 'smbclient'.".format(mode))
+
+    def _get_transfer_mode(self):
+        # SMB-only plugin behavior.
+        return "smbclient"
+
+    def _suggest_install_command(self):
+        if shutil.which("apt-get") or shutil.which("apt"):
+            return "sudo apt install smbclient"
+        if shutil.which("dnf"):
+            return "sudo dnf install samba-client"
+        if shutil.which("yum"):
+            return "sudo yum install samba-client"
+        if shutil.which("zypper"):
+            return "sudo zypper install samba-client"
+        if shutil.which("pacman"):
+            return "sudo pacman -S smbclient"
+        return "Install smbclient with your distro package manager"
 
     @staticmethod
     def _sanitize_name(name):
@@ -1005,6 +1053,15 @@ class NasBackupPlugin(
             "message": message,
             "time":    datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         }
+        self._plugin_manager.send_plugin_message(
+            self._identifier,
+            {
+                "event": "backup_status",
+                "status": self._last_status["status"],
+                "message": self._last_status["message"],
+                "time": self._last_status["time"],
+            },
+        )
 
 
 # ── Plugin registration ───────────────────────────────────────────────────────
@@ -1012,10 +1069,10 @@ class NasBackupPlugin(
 __plugin_name__         = "NAS Backup"
 __plugin_identifier__   = "nasbackup"
 __plugin_pythoncompat__ = ">=3.7,<4"
-__plugin_version__      = "0.3.2"
+__plugin_version__      = "0.3.12"
 __plugin_description__  = (
-    "Automated OctoPrint backups to a NAS - "
-    "scheduled (daily/weekly/monthly), GFS retention, SMB or local path."
+    "Automated OctoPrint backups to a NAS over SMB - "
+    "scheduled (daily/weekly/monthly), GFS retention."
 )
 __plugin_author__       = "KrX3D"
 __plugin_url__          = "https://github.com/KrX3D/OctoPrint-NASBackup"
