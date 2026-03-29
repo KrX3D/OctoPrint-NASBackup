@@ -31,28 +31,43 @@
             <div class="control-group">
                 <label class="control-label">Schedule type</label>
                 <div class="controls">
-                    <select data-bind="value: settings.schedule_type">
-                        <option value="daily">Daily</option>
-                        <option value="weekly">Weekly (same weekday)</option>
-                        <option value="monthly">Monthly (fixed day-of-month)</option>
-                        <option value="disabled">Disabled (manual only)</option>
-                    </select>
+                    <div class="btn-group nasbackup-schedule-group" data-toggle="buttons-radio">
+                        <button class="btn btn-small"
+                                data-bind="click: function(){ settings.schedule_type('daily'); },
+                                           css: { active: scheduleType() === 'daily' }">
+                            Daily
+                        </button>
+                        <button class="btn btn-small"
+                                data-bind="click: function(){ settings.schedule_type('weekly'); },
+                                           css: { active: scheduleType() === 'weekly' }">
+                            Weekly
+                        </button>
+                        <button class="btn btn-small"
+                                data-bind="click: function(){ settings.schedule_type('monthly'); },
+                                           css: { active: scheduleType() === 'monthly' }">
+                            Monthly
+                        </button>
+                        <button class="btn btn-small"
+                                data-bind="click: function(){ settings.schedule_type('disabled'); },
+                                           css: { active: scheduleType() === 'disabled' }">
+                            Manual only
+                        </button>
+                    </div>
                 </div>
             </div>
 
-            <!-- ko if: scheduleType() !== 'disabled' -->
             <div class="control-group">
                 <label class="control-label">Time</label>
                 <div class="controls">
                     <input type="time" style="width:110px;"
-                           data-bind="value: settings.schedule_time"
+                           data-bind="value: settings.schedule_time, enable: scheduleType() !== 'disabled'"
                            placeholder="03:00">
-                    <span class="help-inline muted">HH:MM — device local timezone</span>
+                    <span class="help-inline muted">
+                        HH:MM — device local timezone
+                    </span>
                 </div>
             </div>
-            <!-- /ko -->
 
-            <!-- ko if: scheduleType() === 'weekly' -->
             <div class="control-group">
                 <label class="control-label">Day of week</label>
                 <div class="controls">
@@ -65,20 +80,18 @@
                         <option value="5">Saturday</option>
                         <option value="6">Sunday</option>
                     </select>
+                    <span class="help-inline muted">Used for weekly schedule.</span>
                 </div>
             </div>
-            <!-- /ko -->
 
-            <!-- ko if: scheduleType() === 'monthly' -->
             <div class="control-group">
                 <label class="control-label">Day of month</label>
                 <div class="controls">
                     <input type="number" min="1" max="28" style="width:70px;"
                            data-bind="value: settings.schedule_day_of_month">
-                    <span class="help-inline muted">1-28</span>
+                    <span class="help-inline muted">1-28, used for monthly schedule.</span>
                 </div>
             </div>
-            <!-- /ko -->
 
             <div class="control-group">
                 <div class="controls">
@@ -99,7 +112,7 @@
                     <label class="checkbox">
                         <input type="checkbox"
                                data-bind="checked: settings.backup_on_startup">
-                        Run a backup automatically after OctoPrint starts
+                        Run a backup automatically after OctoPrint starts/restarts
                     </label>
                 </div>
             </div>
@@ -111,7 +124,7 @@
                     <input type="number" min="10" max="3600" style="width:80px;"
                            data-bind="value: settings.startup_delay">
                     <span class="help-inline muted">
-                        Seconds to wait after OctoPrint starts. Default: 120
+                        Seconds to wait after OctoPrint starts. Default: 10
                     </span>
                 </div>
             </div>
@@ -119,34 +132,29 @@
         </div>
 
         <div class="tab-pane" id="nasbackup_tab_nas">
-            <p class="nasbackup-section-heading">Transfer Mode</p>
-
+            <p class="nasbackup-section-heading">SMB Destination</p>
+            <p class="muted" style="font-size:12px; margin-bottom:12px;">
+                This plugin uses SMB only. Please ensure
+                <code>smbclient</code> is installed on the OctoPrint host.
+            </p>
             <div class="control-group">
-                <label class="control-label">Mode</label>
                 <div class="controls">
-                    <select data-bind="value: settings.transfer_mode">
-                        <option value="local">Local path (fstab / NFS / pre-mounted share)</option>
-                        <option value="smbclient">SMB via smbclient (no mount needed)</option>
-                    </select>
+                    <!-- ko if: smbclientInstalled -->
+                    <div class="nasbackup-test-result ok">
+                        <i class="fas fa-check-circle"></i>
+                        smbclient is installed.
+                    </div>
+                    <!-- /ko -->
+                    <!-- ko ifnot: smbclientInstalled -->
+                    <div class="nasbackup-test-result err">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        smbclient is not installed. Run:
+                        <code data-bind="text: smbclientInstallHint"></code>
+                    </div>
+                    <!-- /ko -->
                 </div>
             </div>
 
-            <!-- ko if: transferMode() === 'local' -->
-            <div class="control-group">
-                <label class="control-label">Local backup path</label>
-                <div class="controls">
-                    <input type="text" class="input-block-level"
-                           data-bind="value: settings.local_path"
-                           placeholder="/mnt/octoprint_backup">
-                    <span class="help-block muted">
-                        Must be mounted and writable. Supports
-                        <code>{hostname}</code> variable.
-                    </span>
-                </div>
-            </div>
-            <!-- /ko -->
-
-            <!-- ko if: transferMode() === 'smbclient' -->
             <div>
                 <p class="nasbackup-section-heading" style="margin-top:4px;">SMB Credentials</p>
 
@@ -179,7 +187,7 @@
                             and the <code>{hostname}</code> variable.<br>
                             Examples: <code>RaspberryPi/Backup</code> |
                             <code>Printers/{hostname}</code><br>
-                            Result: <code>\\host\share\subdir\server_name\snapshots\</code>
+                            Result: <code>\\host\share\subdir\server_name\timestamp\</code>
                         </span>
                     </div>
                 </div>
@@ -225,7 +233,6 @@
                     </div>
                 </div>
             </div>
-            <!-- /ko -->
 
             <hr style="margin:14px 0 10px;">
             <p class="nasbackup-section-heading">Connection Test</p>
@@ -240,21 +247,6 @@
                         <i class="fas fa-spinner fa-spin"></i> Testing...
                         <!-- /ko -->
                     </button>
-
-                    <!-- ko if: testResult() !== null -->
-                    <!-- ko if: testResult().success -->
-                    <div class="nasbackup-test-result ok" style="margin-top:8px;">
-                        <i class="fas fa-check-circle"></i>
-                        <span data-bind="text: testResult().message"></span>
-                    </div>
-                    <!-- /ko -->
-                    <!-- ko ifnot: testResult().success -->
-                    <div class="nasbackup-test-result err" style="margin-top:8px;">
-                        <i class="fas fa-times-circle"></i>
-                        <span data-bind="text: testResult().message"></span>
-                    </div>
-                    <!-- /ko -->
-                    <!-- /ko -->
                 </div>
             </div>
         </div>
@@ -341,7 +333,6 @@
                 </div>
             </div>
 
-            <!-- ko if: systemBackupEnabled() -->
             <div class="control-group">
                 <label class="control-label">Paths to back up</label>
                 <div class="controls">
@@ -355,7 +346,6 @@
                     </span>
                 </div>
             </div>
-            <!-- /ko -->
         </div>
 
         <div class="tab-pane" id="nasbackup_tab_retention">
@@ -372,7 +362,6 @@
                 </div>
             </div>
 
-            <!-- ko if: retentionEnabled() -->
             <table class="table table-condensed" style="width:auto; margin-top:10px;">
                 <thead>
                     <tr>
@@ -419,7 +408,6 @@
             <p class="muted" style="font-size:11px; margin-top:4px;">
                 Newest snapshot in each window is kept; everything older is deleted.
             </p>
-            <!-- /ko -->
         </div>
 
         <div class="tab-pane" id="nasbackup_tab_status">
@@ -477,7 +465,7 @@
                 <!-- ko ifnot: backupRunning -->
                 <button class="btn btn-primary btn-small"
                         data-bind="click: triggerBackup,
-                                   enable: !triggerBusy() && isEnabled()">
+                                   enable: !triggerBusy() && smbclientInstalled()">
                     <i class="fas fa-play"></i> Run Backup Now
                 </button>
                 <!-- /ko -->
@@ -501,7 +489,7 @@
             <!-- ko if: logs().length > 0 -->
             <div id="nasbackup_log_area" class="nasbackup-log"
                  data-bind="foreach: logs">
-                <div data-bind="text: $data, css: $parent.logLineClass($data)"></div>
+                <div class="log-line" data-bind="text: $data, css: $parent.logLineClass($data)"></div>
             </div>
             <!-- /ko -->
             <!-- ko if: logs().length === 0 -->
