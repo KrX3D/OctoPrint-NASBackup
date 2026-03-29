@@ -96,3 +96,8 @@ Open OctoPrint → Settings → **NAS Backup**.
 
 ### 0.1.0
 - Initial release
+
+### 0.3.3
+- Fix settings UI script filename so Knockout bindings and API actions load correctly.
+- Improve log panel contrast/readability in the Status tab.
+

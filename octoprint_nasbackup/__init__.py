@@ -1012,7 +1012,7 @@ class NasBackupPlugin(
 __plugin_name__         = "NAS Backup"
 __plugin_identifier__   = "nasbackup"
 __plugin_pythoncompat__ = ">=3.7,<4"
-__plugin_version__      = "0.3.2"
+__plugin_version__      = "0.3.3"
 __plugin_description__  = (
     "Automated OctoPrint backups to a NAS - "
     "scheduled (daily/weekly/monthly), GFS retention, SMB or local path."
