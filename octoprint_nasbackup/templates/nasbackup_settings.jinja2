@@ -112,7 +112,7 @@
                     <label class="checkbox">
                         <input type="checkbox"
                                data-bind="checked: settings.backup_on_startup">
-                        Run a backup automatically after OctoPrint starts
+                        Run a backup automatically after OctoPrint starts/restarts
                     </label>
                 </div>
             </div>
@@ -124,7 +124,7 @@
                     <input type="number" min="10" max="3600" style="width:80px;"
                            data-bind="value: settings.startup_delay">
                     <span class="help-inline muted">
-                        Seconds to wait after OctoPrint starts. Default: 120
+                        Seconds to wait after OctoPrint starts. Default: 10
                     </span>
                 </div>
             </div>

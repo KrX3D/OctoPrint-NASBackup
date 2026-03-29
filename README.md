@@ -131,3 +131,8 @@ Open OctoPrint → Settings → **NAS Backup**.
 - Write/upload `backup.log` at the end of the run so it contains complete logs.
 - Improved SMB directory parsing for retention and snapshot counting.
 
+### 0.3.13
+- Startup backup delay default changed to 10s (still user-configurable).
+- Added startup kind detection in logs (`system_boot` vs `octoprint_restart`, best effort).
+- Improved schedule button selection persistence on page reload.
+

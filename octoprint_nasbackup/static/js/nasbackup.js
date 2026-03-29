@@ -38,8 +38,11 @@ $(function () {
         });
 
         self.scheduleType = ko.computed(function () {
-            try { return self.settings && self.settings.schedule_type(); }
-            catch (e) { return "disabled"; }
+            try {
+                var v = self.settings && self.settings.schedule_type();
+                return (v || "daily").toString().trim();
+            }
+            catch (e) { return "daily"; }
         });
 
         self.transferMode = ko.computed(function () {
@@ -87,6 +90,12 @@ $(function () {
 
         self.onBeforeBinding = function () {
             self.settings = self.settingsViewModel.settings.plugins.nasbackup;
+            try {
+                var cur = self.settings.schedule_type();
+                if (!cur || !cur.toString().trim()) {
+                    self.settings.schedule_type("daily");
+                }
+            } catch (e) {}
         };
 
         self.onSettingsShown = function () {

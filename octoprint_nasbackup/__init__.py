@@ -59,7 +59,7 @@ class NasBackupPlugin(
             only_when_idle=True,
             # Startup backup
             backup_on_startup=False,
-            startup_delay=120,
+            startup_delay=10,
             # Transfer
             transfer_mode="smbclient",
             local_path="/mnt/octoprint_backup",
@@ -167,14 +167,16 @@ class NasBackupPlugin(
 
         enabled         = self._get_bool("enabled")
         backup_on_start = self._get_bool("backup_on_startup")
-        delay           = int(self._settings.get(["startup_delay"]) or 120)
+        delay           = int(self._settings.get(["startup_delay"]) or 10)
+        startup_kind    = self._detect_startup_kind()
 
         self._plugin_log(
-            "Startup config: enabled={} backup_on_startup={} startup_delay={}s "
+            "Startup config: enabled={} backup_on_startup={} startup_delay={}s startup_kind={} "
             "server_name_auto={} transfer_mode={}".format(
                 enabled,
                 backup_on_start,
                 delay,
+                startup_kind,
                 self._settings.get(["server_name_auto"]),
                 self._settings.get(["transfer_mode"]),
             )
@@ -187,7 +189,7 @@ class NasBackupPlugin(
         if enabled and backup_on_start:
             self._plugin_log("Startup backup armed — will fire in {}s.".format(delay))
             self._startup_timer = threading.Timer(
-                delay, lambda: self._run_backup(source="startup")
+                delay, lambda: self._run_backup(source="startup_{}".format(startup_kind))
             )
             self._startup_timer.daemon = True
             self._startup_timer.start()
@@ -966,6 +968,19 @@ class NasBackupPlugin(
         # SMB-only plugin behavior.
         return "smbclient"
 
+    def _detect_startup_kind(self):
+        """
+        Best-effort startup source detection:
+        - system_boot: machine uptime is short (<=5 min)
+        - octoprint_restart: uptime is longer
+        """
+        try:
+            with open("/proc/uptime", "r") as f:
+                uptime_sec = float((f.read().split() or ["0"])[0])
+            return "system_boot" if uptime_sec <= 300 else "octoprint_restart"
+        except Exception:
+            return "unknown"
+
     def _suggest_install_command(self):
         if shutil.which("apt-get") or shutil.which("apt"):
             return "sudo apt install smbclient"
@@ -1069,7 +1084,7 @@ class NasBackupPlugin(
 __plugin_name__         = "NAS Backup"
 __plugin_identifier__   = "nasbackup"
 __plugin_pythoncompat__ = ">=3.7,<4"
-__plugin_version__      = "0.3.12"
+__plugin_version__      = "0.3.13"
 __plugin_description__  = (
     "Automated OctoPrint backups to a NAS over SMB - "
     "scheduled (daily/weekly/monthly), GFS retention."
