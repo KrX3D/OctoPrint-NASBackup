@@ -41,6 +41,7 @@ class NasBackupPlugin(
         self._backup_running   = False
         self._backup_lock      = threading.Lock()
         self._log_entries      = deque(maxlen=MAX_LOG_ENTRIES)
+        self._current_run_entries = None
         self._last_status      = {
             "status":  "never",
             "message": "No backup has been run yet.",
@@ -459,6 +460,7 @@ class NasBackupPlugin(
 
         start_time = datetime.datetime.now()
         timestamp  = start_time.strftime("%Y-%m-%d_%H%M%S")
+        self._current_run_entries = []
 
         try:
             self._log("=" * 60)
@@ -537,6 +539,7 @@ class NasBackupPlugin(
             self._set_status("failed", str(exc))
         finally:
             self._backup_running = False
+            self._current_run_entries = None
 
     # ── Step 1 ────────────────────────────────────────────────────────────────
 
@@ -631,7 +634,13 @@ class NasBackupPlugin(
             self._log("  Could not update 'latest' symlink: {}".format(exc), "WARNING")
 
         self._log("  Local transfer complete.")
-        return {"mode": "local", "path": snap_dir}
+        return {
+            "mode": "local",
+            "path": snap_dir,
+            "parent": os.path.join(base, server_name),
+            "zip_name": os.path.basename(zip_path),
+            "timestamp": timestamp,
+        }
 
     def _backup_system_files_local(self, snap_dir):
         items   = self._get_system_items()
@@ -688,23 +697,94 @@ class NasBackupPlugin(
             suffix=".txt",
         )
         self._log("  SMB transfer complete.")
-        return {"mode": "smbclient", "path": remote_snap}
+        return {
+            "mode": "smbclient",
+            "path": remote_snap,
+            "parent": "{}/{}".format(subdir, server_name),
+            "zip_name": os.path.basename(zip_path),
+            "timestamp": timestamp,
+        }
 
     def _copy_log_to_destination(self, destination):
         if not destination:
             return
+        log_name = self._zip_to_log_name(destination.get("zip_name"))
+        run_log_text = self._build_run_log_text()
+        monthly_append_text = self._build_monthly_append_text(destination.get("timestamp"))
+
         if destination.get("mode") == "local":
-            self._write_log_file(os.path.join(destination["path"], "backup.log"))
-            self._log("  Final log copied to local snapshot.")
+            self._write_log_file(os.path.join(destination["path"], log_name), run_log_text)
+            self._append_local_text_file(
+                os.path.join(destination["parent"], self._monthly_log_name(destination.get("timestamp"))),
+                monthly_append_text
+            )
+            self._log("  Final log copied to local snapshot and monthly root log.")
             return
         if destination.get("mode") == "smbclient":
             self._upload_temp_file_smbclient(
-                lambda f: self._write_log_file(f),
-                "{}/backup.log".format(destination["path"]),
+                lambda f: self._write_log_file(f, run_log_text),
+                "{}/{}".format(destination["path"], log_name),
                 suffix=".log",
             )
-            self._log("  Final log uploaded to SMB snapshot.")
+            self._append_text_file_smbclient(
+                "{}/{}".format(
+                    destination["parent"],
+                    self._monthly_log_name(destination.get("timestamp"))
+                ),
+                monthly_append_text
+            )
+            self._log("  Final log uploaded to SMB snapshot and monthly root log.")
             return
+
+    @staticmethod
+    def _zip_to_log_name(zip_name):
+        if not zip_name:
+            return "backup.log"
+        if zip_name.lower().endswith(".zip"):
+            return zip_name[:-4] + ".log"
+        return zip_name + ".log"
+
+    @staticmethod
+    def _monthly_log_name(timestamp):
+        if timestamp and len(timestamp) >= 7:
+            return "nasbackup-{}.log".format(timestamp[:7])
+        return "nasbackup-current.log"
+
+    def _build_run_log_text(self):
+        entries = self._current_run_entries or list(self._log_entries)
+        return "\n".join(entries) + "\n"
+
+    def _build_monthly_append_text(self, timestamp):
+        sep = "=" * 78
+        hdr = [
+            sep,
+            "NAS Backup run {}".format(timestamp or datetime.datetime.now().strftime("%Y-%m-%d_%H%M%S")),
+            sep,
+        ]
+        return "\n".join(hdr) + "\n" + self._build_run_log_text() + "\n"
+
+    @staticmethod
+    def _append_local_text_file(path, text):
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        with open(path, "a") as f:
+            f.write(text)
+
+    def _append_text_file_smbclient(self, remote_path, text):
+        fd, local = tempfile.mkstemp(prefix="nasbackup_append_", suffix=".log")
+        os.close(fd)
+        try:
+            # Fetch current file if it exists; ignore errors when not found.
+            self._smb_exec("get \"{}\" \"{}\"".format(remote_path, local))
+            with open(local, "a") as f:
+                f.write(text)
+            rc, out, err = self._smb_exec("put \"{}\" \"{}\"".format(local, remote_path))
+            if rc != 0:
+                self._log("  Could not append monthly SMB log: {}".format(err.strip()), "WARNING")
+        finally:
+            try:
+                os.unlink(local)
+            except Exception:
+                pass
 
     def _backup_system_files_smbclient(self, remote_snap):
         items    = self._get_system_items()
@@ -1081,10 +1161,13 @@ class NasBackupPlugin(
         raw = self._settings.get(["system_backup_items"]) or ""
         return [x.strip() for x in raw.splitlines() if x.strip()]
 
-    def _write_log_file(self, path):
+    def _write_log_file(self, path, text=None):
         with open(path, "w") as f:
-            for entry in self._log_entries:
-                f.write(entry + "\n")
+            if text is not None:
+                f.write(text)
+            else:
+                for entry in self._log_entries:
+                    f.write(entry + "\n")
 
     def _write_metadata_file(self, path, zip_path, timestamp, server_name):
         with open(path, "w") as f:
@@ -1121,7 +1204,10 @@ class NasBackupPlugin(
 
     def _log(self, message, level="INFO"):
         ts = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        self._log_entries.append("[{}] [{}] {}".format(ts, level, message))
+        line = "[{}] [{}] {}".format(ts, level, message)
+        self._log_entries.append(line)
+        if self._current_run_entries is not None:
+            self._current_run_entries.append(line)
         if level == "ERROR":
             self._logger.error(message)
         elif level == "WARNING":
@@ -1157,7 +1243,7 @@ class NasBackupPlugin(
 __plugin_name__         = "NAS Backup"
 __plugin_identifier__   = "nasbackup"
 __plugin_pythoncompat__ = ">=3.7,<4"
-__plugin_version__      = "0.3.16"
+__plugin_version__      = "0.3.17"
 __plugin_description__  = (
     "Automated OctoPrint backups to a NAS over SMB - "
     "scheduled (daily/weekly/monthly), GFS retention."

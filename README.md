@@ -187,3 +187,9 @@ The plugin ships with these defaults (from `get_settings_defaults()`):
 ### 0.3.16
 - Startup delay and startup-type options are now always editable in UI.
 - Fixed daily retention behavior to keep only the newest snapshot per day window.
+
+### 0.3.17
+- Snapshot log now uses backup ZIP base name (`octoprint-backup-YYYYMMDD-HHMMSS.log`).
+- Added monthly root log append file (`nasbackup-YYYY-MM.log`) that survives snapshot pruning.
+- Monthly root log entries now include clear separators between runs.
+
