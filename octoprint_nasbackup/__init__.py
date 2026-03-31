@@ -532,8 +532,10 @@ class NasBackupPlugin(
             self._log("Backup completed successfully in {}s.".format(elapsed))
             self._log("=" * 60)
 
-            if self._get_bool("copy_log_to_nas"):
-                self._copy_log_to_destination(destination)
+            self._copy_log_to_destination(
+                destination,
+                include_snapshot_log=self._get_bool("copy_log_to_nas")
+            )
 
             self._set_status("success", "Completed in {}s.".format(elapsed))
 
@@ -709,7 +711,7 @@ class NasBackupPlugin(
             "timestamp": timestamp,
         }
 
-    def _copy_log_to_destination(self, destination):
+    def _copy_log_to_destination(self, destination, include_snapshot_log=False):
         if not destination:
             return
         log_name = self._zip_to_log_name(destination.get("zip_name"))
@@ -717,19 +719,24 @@ class NasBackupPlugin(
         monthly_append_text = self._build_monthly_append_text(destination.get("timestamp"))
 
         if destination.get("mode") == "local":
-            self._write_log_file(os.path.join(destination["path"], log_name), run_log_text)
+            if include_snapshot_log:
+                self._write_log_file(os.path.join(destination["path"], log_name), run_log_text)
             self._append_local_text_file(
                 os.path.join(destination["parent"], self._monthly_log_name(destination.get("timestamp"))),
                 monthly_append_text
             )
-            self._log("  Final log copied to local snapshot and monthly root log.")
+            if include_snapshot_log:
+                self._log("  Final log copied to local snapshot and monthly root log.")
+            else:
+                self._log("  Monthly root log updated (snapshot log disabled).")
             return
         if destination.get("mode") == "smbclient":
-            self._upload_temp_file_smbclient(
-                lambda f: self._write_log_file(f, run_log_text),
-                "{}/{}".format(destination["path"], log_name),
-                suffix=".log",
-            )
+            if include_snapshot_log:
+                self._upload_temp_file_smbclient(
+                    lambda f: self._write_log_file(f, run_log_text),
+                    "{}/{}".format(destination["path"], log_name),
+                    suffix=".log",
+                )
             self._append_text_file_smbclient(
                 "{}/{}".format(
                     destination["parent"],
@@ -737,7 +744,10 @@ class NasBackupPlugin(
                 ),
                 monthly_append_text
             )
-            self._log("  Final log uploaded to SMB snapshot and monthly root log.")
+            if include_snapshot_log:
+                self._log("  Final log uploaded to SMB snapshot and monthly root log.")
+            else:
+                self._log("  Monthly root log updated on SMB (snapshot log disabled).")
             return
 
     @staticmethod

@@ -19,7 +19,7 @@ msgid "Fresh cold boot (power on / no recent shutdown marker)"
 msgstr "Frischer Kaltstart (Einschalten / kein aktueller Shutdown-Marker)"
 
 msgid "System restart/reboot (detected graceful restart)"
-msgstr "Systemneustart/Reboot (erkannter sauberer Neustart)"
+msgstr "Systemneustart/Reboot (erkannter sauberen Neustart)"
 
 msgid "OctoPrint service restart (same OS boot session)"
 msgstr "OctoPrint-Dienstneustart (gleiche OS-Start-Sitzung)"
@@ -211,7 +211,7 @@ msgid "One per year for N years"
 msgstr "Einer pro Jahr für N Jahre"
 
 msgid "Only run when printer is"
-msgstr "Nur ausführen, wenn der Drucker"
+msgstr "Nur ausführen, wenn Drucker"
 
 msgid "Password"
 msgstr "Passwort"
@@ -372,3 +372,15 @@ msgstr "Uploads"
 msgid "variable."
 msgstr "Variable."
 
+
+msgid "SMB connection successful."
+msgstr "SMB-Verbindung erfolgreich."
+
+msgid "Completed in {seconds}s."
+msgstr "Abgeschlossen in {seconds}s."
+
+msgid "Result (example 1):"
+msgstr "Ergebnis (Beispiel 1):"
+
+msgid "Result (example 2):"
+msgstr "Ergebnis (Beispiel 2):"

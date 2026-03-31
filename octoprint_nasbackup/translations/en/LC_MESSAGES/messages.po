@@ -372,3 +372,15 @@ msgstr "uploads"
 msgid "variable."
 msgstr "variable."
 
+
+msgid "SMB connection successful."
+msgstr "SMB connection successful."
+
+msgid "Completed in {seconds}s."
+msgstr "Completed in {seconds}s."
+
+msgid "Result (example 1):"
+msgstr "Result (example 1):"
+
+msgid "Result (example 2):"
+msgstr "Result (example 2):"

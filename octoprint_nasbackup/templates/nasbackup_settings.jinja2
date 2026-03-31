@@ -204,9 +204,9 @@
                                placeholder="OctoPrint">
                         <span class="help-block muted">
                             {{ _("Path inside the share. Supports") }} <code>/</code> {{ _("sub-folders and the") }} <code>{hostname}</code> {{ _("variable.") }}<br>
-                            {{ _("Examples:") }} <code>RaspberryPi/Backup</code> |
-                            <code>Printers/{hostname}</code><br>
-                            {{ _("Result:") }} <code>\\host\share\subdir\server_name\timestamp\</code>
+                            {{ _("Examples:") }} <code>RaspberryPi/Backup</code> | <code>Printers/{hostname}</code><br>
+                            {{ _("Result (example 1):") }} <code>\\hostip\share\RaspberryPi\Backup\server_name\timestamp\</code><br>
+                            {{ _("Result (example 2):") }} <code>\\hostip\share\Printers\hostname\server_name\timestamp\</code>
                         </span>
                     </div>
                 </div>
@@ -360,8 +360,7 @@
                               style="font-family:monospace; font-size:12px;"></textarea>
                     <span class="help-block muted">
                         {{ _("One path per line. Files and directories supported.") }}<br>
-                        {{ _("SMB: packed into") }} <code>system_backup.tar.gz</code>.<br>
-                        {{ _("Local: copied preserving directory structure.") }}
+                        {{ _("SMB: packed into") }} <code>system_backup.tar.gz</code>.
                     </span>
                 </div>
             </div>

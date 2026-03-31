@@ -9,6 +9,18 @@ $(function () {
         return text;
     };
 
+    var translateBackendMessage = function (message) {
+        if (!message) { return message; }
+        if (message === "SMB connection successful.") {
+            return tr("SMB connection successful.");
+        }
+        var m = /^Completed in (\d+)s\.$/.exec(message);
+        if (m) {
+            return tr("Completed in {seconds}s.").replace("{seconds}", m[1]);
+        }
+        return message;
+    };
+
     function NasBackupViewModel(parameters) {
         var self = this;
 
@@ -28,7 +40,7 @@ $(function () {
         self.triggerBusy = ko.observable(false);
         self.testBusy    = ko.observable(false);
         self.smbclientInstalled   = ko.observable(true);
-            self.smbclientInstallHint = ko.observable("sudo apt install smbclient");
+        self.smbclientInstallHint = ko.observable("sudo apt install smbclient");
         self.pluginVersion = ko.observable("?");
 
         // settings is set in onBeforeBinding — null until then.
@@ -163,7 +175,7 @@ $(function () {
                 var translatedStatus = statusLabelMap[data.status] || (data.status || tr("Status"));
                 new PNotify({
                     title: tr("NAS Backup"),
-                    text: translatedStatus + ": " + (data.message || ""),
+                    text: translatedStatus + ": " + translateBackendMessage(data.message || ""),
                     type: typeMap[data.status] || "info",
                     hide: true
                 });
@@ -216,7 +228,7 @@ $(function () {
                     } else {
                         new PNotify({
                             title: tr("NAS Backup"),
-                            text: data.message || tr("Could not start backup."),
+                            text: translateBackendMessage(data.message) || tr("Could not start backup."),
                             type: "error"
                         });
                     }
@@ -234,7 +246,7 @@ $(function () {
                 .done(function (data) {
                     new PNotify({
                         title: tr("NAS Backup"),
-                        text: data.message || tr("Connection test finished."),
+                        text: translateBackendMessage(data.message) || tr("Connection test finished."),
                         type: data.success ? "success" : "error",
                         hide: true
                     });
