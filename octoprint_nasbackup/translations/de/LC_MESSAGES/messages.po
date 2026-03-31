@@ -1,0 +1,49 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: OctoPrint-NASBackup\n"
+"Language: de\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+msgid "Run a backup automatically after OctoPrint starts/restarts"
+msgstr "Backup automatisch nach OctoPrint-Start/Neustart ausführen"
+
+msgid "Seconds to wait after OctoPrint starts. Default: 10"
+msgstr "Sekunden nach dem OctoPrint-Start warten. Standard: 10"
+
+msgid "System restart is detected from a recent graceful shutdown marker (about 15 minutes)."
+msgstr "Systemneustart wird über einen kürzlich gesetzten Marker für sauberes Herunterfahren erkannt (ca. 15 Minuten)."
+
+msgid "Fresh cold boot (power on / no recent shutdown marker)"
+msgstr "Frischer Kaltstart (Einschalten / kein aktueller Shutdown-Marker)"
+
+msgid "System restart/reboot (detected graceful restart)"
+msgstr "Systemneustart/Reboot (erkannter sauberer Neustart)"
+
+msgid "OctoPrint service restart (same OS boot session)"
+msgstr "OctoPrint-Dienstneustart (gleiche OS-Start-Sitzung)"
+
+msgid "NAS Backup"
+msgstr "NAS Backup"
+
+msgid "Scheduled backup started."
+msgstr "Geplanter Backup-Lauf gestartet."
+
+msgid "smbclient is not installed."
+msgstr "smbclient ist nicht installiert."
+
+msgid "Backup started."
+msgstr "Backup gestartet."
+
+msgid "Could not start backup."
+msgstr "Backup konnte nicht gestartet werden."
+
+msgid "Request failed."
+msgstr "Anfrage fehlgeschlagen."
+
+msgid "Connection test finished."
+msgstr "Verbindungstest abgeschlossen."
+
+msgid "Request to OctoPrint failed."
+msgstr "Anfrage an OctoPrint fehlgeschlagen."
