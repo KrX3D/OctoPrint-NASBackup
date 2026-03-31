@@ -2,6 +2,24 @@
  * OctoPrint-NASBackup — nasbackup.js
  */
 $(function () {
+    var tr = function (text) {
+        try {
+            if (typeof gettext === "function") { return gettext(text); }
+        } catch (e) {}
+        return text;
+    };
+
+    var translateBackendMessage = function (message) {
+        if (!message) { return message; }
+        if (message === "SMB connection successful.") {
+            return tr("SMB connection successful.");
+        }
+        var m = /^Completed in (\d+)s\.$/.exec(message);
+        if (m) {
+            return tr("Completed in {seconds}s.").replace("{seconds}", m[1]);
+        }
+        return message;
+    };
 
     function NasBackupViewModel(parameters) {
         var self = this;
@@ -14,14 +32,16 @@ $(function () {
         self.startupPending = ko.observable(false);
         self.nextRun        = ko.observable(null);
         self.lastStatus     = ko.observable({
-            status: "never", message: "No backup run yet.", time: null
+            status: "never", message: tr("No backup run yet."), time: null
         });
         self.logs           = ko.observableArray([]);
         self.statusPolling  = null;
 
         self.triggerBusy = ko.observable(false);
         self.testBusy    = ko.observable(false);
-        self.testResult  = ko.observable(null);
+        self.smbclientInstalled   = ko.observable(true);
+        self.smbclientInstallHint = ko.observable("sudo apt install smbclient");
+        self.pluginVersion = ko.observable("?");
 
         // settings is set in onBeforeBinding — null until then.
         // NEVER call settings.xxx() directly in data-bind attributes.
@@ -32,13 +52,19 @@ $(function () {
         // These return a safe default if settings is not yet loaded.
 
         self.isEnabled = ko.computed(function () {
-            try { return self.settings && self.settings.enabled(); }
+            try {
+                var v = self.settings && self.settings.enabled();
+                return v === true || v === "true" || v === 1 || v === "1";
+            }
             catch (e) { return false; }
         });
 
         self.scheduleType = ko.computed(function () {
-            try { return self.settings && self.settings.schedule_type(); }
-            catch (e) { return "disabled"; }
+            try {
+                var v = self.settings && self.settings.schedule_type();
+                return (v || "daily").toString().trim();
+            }
+            catch (e) { return "daily"; }
         });
 
         self.transferMode = ko.computed(function () {
@@ -47,7 +73,10 @@ $(function () {
         });
 
         self.backupOnStartup = ko.computed(function () {
-            try { return self.settings && self.settings.backup_on_startup(); }
+            try {
+                var v = self.settings && self.settings.backup_on_startup();
+                return v === true || v === "true" || v === 1 || v === "1";
+            }
             catch (e) { return false; }
         });
 
@@ -76,8 +105,11 @@ $(function () {
 
         self.statusLabel = ko.computed(function () {
             var map = {
-                success: "Success", failed: "Failed",
-                running: "Running...", skipped: "Skipped", never: "Never run"
+                success: tr("Success"),
+                failed: tr("Failed"),
+                running: tr("Running..."),
+                skipped: tr("Skipped"),
+                never: tr("Never run")
             };
             return map[self.lastStatus().status] || (self.lastStatus().status || "never");
         });
@@ -86,11 +118,16 @@ $(function () {
 
         self.onBeforeBinding = function () {
             self.settings = self.settingsViewModel.settings.plugins.nasbackup;
+            try {
+                var cur = self.settings.schedule_type();
+                if (!cur || !cur.toString().trim()) {
+                    self.settings.schedule_type("daily");
+                }
+            } catch (e) {}
         };
 
         self.onSettingsShown = function () {
             self.testBusy(false);
-            self.testResult(null);
             self.triggerBusy(false);
             self.refreshStatus();
 
@@ -108,6 +145,44 @@ $(function () {
             }
         };
 
+        self.onDataUpdaterPluginMessage = function (plugin, data) {
+            if (plugin !== "nasbackup" || !data || !data.event) { return; }
+            if (data.event === "scheduled_backup_started") {
+                new PNotify({
+                    title: tr("NAS Backup"),
+                    text: tr("Scheduled backup started."),
+                    type: "info",
+                    hide: true
+                });
+                self.refreshStatus();
+                return;
+            }
+            if (data.event === "backup_status") {
+                var typeMap = {
+                    success: "success",
+                    failed: "error",
+                    skipped: "notice",
+                    running: "info",
+                    never: "info"
+                };
+                var statusLabelMap = {
+                    success: tr("Success"),
+                    failed: tr("Failed"),
+                    skipped: tr("Skipped"),
+                    running: tr("Running..."),
+                    never: tr("Never run")
+                };
+                var translatedStatus = statusLabelMap[data.status] || (data.status || tr("Status"));
+                new PNotify({
+                    title: tr("NAS Backup"),
+                    text: translatedStatus + ": " + translateBackendMessage(data.message || ""),
+                    type: typeMap[data.status] || "info",
+                    hide: true
+                });
+                self.refreshStatus();
+            }
+        };
+
         // ── API ───────────────────────────────────────────────────────
 
         self.refreshStatus = function () {
@@ -115,10 +190,17 @@ $(function () {
                 .done(function (data) {
                     self.backupRunning(data.running === true);
                     self.startupPending(data.startup_pending === true);
-                    self.lastStatus(data.last_status || {
-                        status: "never", message: "", time: null
-                    });
+                    var incomingStatus = data.last_status || {
+                        status: "never", message: tr("No backup run yet."), time: null
+                    };
+                    if (incomingStatus && incomingStatus.message) {
+                        incomingStatus.message = translateBackendMessage(incomingStatus.message);
+                    }
+                    self.lastStatus(incomingStatus);
                     self.nextRun(data.next_run || null);
+                    self.pluginVersion(data.plugin_version || "?");
+                    self.smbclientInstalled(data.smbclient_installed === true);
+                    self.smbclientInstallHint(data.smbclient_install_hint || "sudo apt install smbclient");
                     if (Array.isArray(data.logs)) {
                         self.logs(data.logs);
                         var el = document.getElementById("nasbackup_log_area");
@@ -129,26 +211,34 @@ $(function () {
 
         self.triggerBackup = function () {
             if (self.triggerBusy() || self.backupRunning()) { return; }
+            if (!self.smbclientInstalled()) {
+                new PNotify({
+                    title: tr("NAS Backup"),
+                    text: tr("smbclient is not installed.") + " " + self.smbclientInstallHint(),
+                    type: "error"
+                });
+                return;
+            }
             self.triggerBusy(true);
             OctoPrint.simpleApiCommand("nasbackup", "trigger_backup", {})
                 .done(function (data) {
                     if (data.success) {
                         new PNotify({
-                            title: "NAS Backup", text: "Backup started.",
+                            title: tr("NAS Backup"), text: tr("Backup started."),
                             type: "success", hide: true
                         });
                         self.backupRunning(true);
                         setTimeout(self.refreshStatus, 1000);
                     } else {
                         new PNotify({
-                            title: "NAS Backup",
-                            text: data.message || "Could not start backup.",
+                            title: tr("NAS Backup"),
+                            text: translateBackendMessage(data.message) || tr("Could not start backup."),
                             type: "error"
                         });
                     }
                 })
                 .fail(function () {
-                    new PNotify({title: "NAS Backup", text: "Request failed.", type: "error"});
+                    new PNotify({title: tr("NAS Backup"), text: tr("Request failed."), type: "error"});
                 })
                 .always(function () { self.triggerBusy(false); });
         };
@@ -156,13 +246,20 @@ $(function () {
         self.testConnection = function () {
             if (self.testBusy()) { return; }
             self.testBusy(true);
-            self.testResult(null);
             OctoPrint.simpleApiCommand("nasbackup", "test_connection", {})
-                .done(function (data) { self.testResult(data); })
+                .done(function (data) {
+                    new PNotify({
+                        title: tr("NAS Backup"),
+                        text: translateBackendMessage(data.message) || tr("Connection test finished."),
+                        type: data.success ? "success" : "error",
+                        hide: true
+                    });
+                })
                 .fail(function () {
-                    self.testResult({
-                        success: false,
-                        message: "Request to OctoPrint failed."
+                    new PNotify({
+                        title: tr("NAS Backup"),
+                        text: tr("Request to OctoPrint failed."),
+                        type: "error"
                     });
                 })
                 .always(function () { self.testBusy(false); });
