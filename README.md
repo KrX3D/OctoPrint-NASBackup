@@ -68,6 +68,16 @@ The plugin now includes initial translations for:
 
 OctoPrint will use the active UI language automatically, falling back to English strings if a translation is missing.
 
+> Translation files follow gettext/Babel layout and **must** live under  
+> `translations/<lang>/LC_MESSAGES/messages.po` + `messages.mo`.
+>
+> This repository stores the editable `.po` files.  
+> If your workflow cannot handle binary files in PRs, compile `.mo` files locally when building/releasing:
+> ```bash
+> msgfmt octoprint_nasbackup/translations/de/LC_MESSAGES/messages.po -o octoprint_nasbackup/translations/de/LC_MESSAGES/messages.mo
+> msgfmt octoprint_nasbackup/translations/en/LC_MESSAGES/messages.po -o octoprint_nasbackup/translations/en/LC_MESSAGES/messages.mo
+> ```
+
 ### Default option values
 
 The plugin ships with these defaults (from `get_settings_defaults()`):
@@ -204,3 +214,8 @@ The plugin ships with these defaults (from `get_settings_defaults()`):
 ### 0.3.18
 - Startup restart classification now consumes shutdown markers to reduce cold-boot misclassification after quick reboot cycles.
 - Added first translation bundles (English/German) for startup labels and key notifications.
+
+### 0.3.19
+- Removed compiled `.mo` binaries from repository to avoid PR systems that reject binary diffs.
+- Added README instructions to compile translation catalogs locally during build/release.
+
