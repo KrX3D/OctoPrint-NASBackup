@@ -1,0 +1,374 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: OctoPrint-NASBackup\n"
+"Language: en\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+msgid "Run a backup automatically after OctoPrint starts/restarts"
+msgstr "Run a backup automatically after OctoPrint starts/restarts"
+
+msgid "Seconds to wait after OctoPrint starts. Default: 10"
+msgstr "Seconds to wait after OctoPrint starts. Default: 10"
+
+msgid "System restart is detected from a recent graceful shutdown marker (about 15 minutes)."
+msgstr "System restart is detected from a recent graceful shutdown marker (about 15 minutes)."
+
+msgid "Fresh cold boot (power on / no recent shutdown marker)"
+msgstr "Fresh cold boot (power on / no recent shutdown marker)"
+
+msgid "System restart/reboot (detected graceful restart)"
+msgstr "System restart/reboot (detected graceful restart)"
+
+msgid "OctoPrint service restart (same OS boot session)"
+msgstr "OctoPrint service restart (same OS boot session)"
+
+msgid "NAS Backup"
+msgstr "NAS Backup"
+
+msgid "Scheduled backup started."
+msgstr "Scheduled backup started."
+
+msgid "smbclient is not installed."
+msgstr "smbclient is not installed."
+
+msgid "Backup started."
+msgstr "Backup started."
+
+msgid "Could not start backup."
+msgstr "Could not start backup."
+
+msgid "Request failed."
+msgstr "Request failed."
+
+msgid "Connection test finished."
+msgstr "Connection test finished."
+
+msgid "Request to OctoPrint failed."
+msgstr "Request to OctoPrint failed."
+
+msgid "(GCODE files)"
+msgstr "(GCODE files)"
+
+msgid "(falls back to hostname)"
+msgstr "(falls back to hostname)"
+
+msgid "(optional)"
+msgstr "(optional)"
+
+msgid "(recommended — can be very large)"
+msgstr "(recommended — can be very large)"
+
+msgid "(skip if printing or paused)"
+msgstr "(skip if printing or paused)"
+
+msgid "1-28, used for monthly schedule."
+msgstr "1-28, used for monthly schedule."
+
+msgid "Auto-detect from OctoPrint appearance name"
+msgstr "Auto-detect from OctoPrint appearance name"
+
+msgid "Backup Log"
+msgstr "Backup Log"
+
+msgid "Backup Options"
+msgstr "Backup Options"
+
+msgid "Backup Schedule"
+msgstr "Backup Schedule"
+
+msgid "Backup running..."
+msgstr "Backup running..."
+
+msgid "Category"
+msgstr "Category"
+
+msgid "Clear log"
+msgstr "Clear log"
+
+msgid "Connection Test"
+msgstr "Connection Test"
+
+msgid "Copy backup log to NAS alongside each snapshot"
+msgstr "Copy backup log to NAS alongside each snapshot"
+
+msgid "Current Status"
+msgstr "Current Status"
+
+msgid "Daily"
+msgstr "Daily"
+
+msgid "Day of month"
+msgstr "Day of month"
+
+msgid "Day of week"
+msgstr "Day of week"
+
+msgid "Delay (seconds)"
+msgstr "Delay (seconds)"
+
+msgid "Description"
+msgstr "Description"
+
+msgid "Domain"
+msgstr "Domain"
+
+msgid "Enable NAS Backup Plugin"
+msgstr "Enable NAS Backup Plugin"
+
+msgid "Enable automatic pruning"
+msgstr "Enable automatic pruning"
+
+msgid "Enable system files backup"
+msgstr "Enable system files backup"
+
+msgid "Examples:"
+msgstr "Examples:"
+
+msgid "Exclude"
+msgstr "Exclude"
+
+msgid "Failed"
+msgstr "Failed"
+
+msgid "Friday"
+msgstr "Friday"
+
+msgid "GFS Retention Policy"
+msgstr "GFS Retention Policy"
+
+msgid "HH:MM — device local timezone"
+msgstr "HH:MM — device local timezone"
+
+msgid "Host / IP"
+msgstr "Host / IP"
+
+msgid "Keep"
+msgstr "Keep"
+
+msgid "Last run"
+msgstr "Last run"
+
+msgid "Local ZIP keep count"
+msgstr "Local ZIP keep count"
+
+msgid "Local: copied preserving directory structure."
+msgstr "Local: copied preserving directory structure."
+
+msgid "Manual only"
+msgstr "Manual only"
+
+msgid "Manual:"
+msgstr "Manual:"
+
+msgid "Message"
+msgstr "Message"
+
+msgid "Monday"
+msgstr "Monday"
+
+msgid "Monthly"
+msgstr "Monthly"
+
+msgid "NAS Connection"
+msgstr "NAS Connection"
+
+msgid "Never run"
+msgstr "Never run"
+
+msgid "Newest snapshot in each window is kept; everything older is deleted."
+msgstr "Newest snapshot in each window is kept; everything older is deleted."
+
+msgid "Next scheduled"
+msgstr "Next scheduled"
+
+msgid "No backup run yet."
+msgstr "No backup run yet."
+
+msgid "No log entries yet. Run a backup or wait for the scheduled run."
+msgstr "No log entries yet. Run a backup or wait for the scheduled run."
+
+msgid "Not scheduled"
+msgstr "Not scheduled"
+
+msgid "OctoPrint ZIP Backup"
+msgstr "OctoPrint ZIP Backup"
+
+msgid "One path per line. Files and directories supported."
+msgstr "One path per line. Files and directories supported."
+
+msgid "One per day for N days"
+msgstr "One per day for N days"
+
+msgid "One per month for N months"
+msgstr "One per month for N months"
+
+msgid "One per week for N weeks"
+msgstr "One per week for N weeks"
+
+msgid "One per year for N years"
+msgstr "One per year for N years"
+
+msgid "Only run when printer is"
+msgstr "Only run when printer is"
+
+msgid "Password"
+msgstr "Password"
+
+msgid "Path inside the share. Supports"
+msgstr "Path inside the share. Supports"
+
+msgid "Paths to back up"
+msgstr "Paths to back up"
+
+msgid "Pending..."
+msgstr "Pending..."
+
+msgid "Refresh"
+msgstr "Refresh"
+
+msgid "Result:"
+msgstr "Result:"
+
+msgid "Retention"
+msgstr "Retention"
+
+msgid "Run Backup Now"
+msgstr "Run Backup Now"
+
+msgid "Run on"
+msgstr "Run on"
+
+msgid "Running..."
+msgstr "Running..."
+
+msgid "SMB Credentials"
+msgstr "SMB Credentials"
+
+msgid "SMB Destination"
+msgstr "SMB Destination"
+
+msgid "SMB version"
+msgstr "SMB version"
+
+msgid "SMB: packed into"
+msgstr "SMB: packed into"
+
+msgid "Saturday"
+msgstr "Saturday"
+
+msgid "Schedule"
+msgstr "Schedule"
+
+msgid "Schedule type"
+msgstr "Schedule type"
+
+msgid "Server / Printer Name"
+msgstr "Server / Printer Name"
+
+msgid "Share name"
+msgstr "Share name"
+
+msgid "Skipped"
+msgstr "Skipped"
+
+msgid "Startup Backup"
+msgstr "Startup Backup"
+
+msgid "Startup backup"
+msgstr "Startup backup"
+
+msgid "Status"
+msgstr "Status"
+
+msgid "Status / Log"
+msgstr "Status / Log"
+
+msgid "Sub-directory"
+msgstr "Sub-directory"
+
+msgid "Success"
+msgstr "Success"
+
+msgid "Sunday"
+msgstr "Sunday"
+
+msgid "System Files"
+msgstr "System Files"
+
+msgid "System Files Backup"
+msgstr "System Files Backup"
+
+msgid "Test Connection"
+msgstr "Test Connection"
+
+msgid "Testing..."
+msgstr "Testing..."
+
+msgid "This plugin uses SMB only. Please ensure"
+msgstr "This plugin uses SMB only. Please ensure"
+
+msgid "Thursday"
+msgstr "Thursday"
+
+msgid "Time"
+msgstr "Time"
+
+msgid "Tuesday"
+msgstr "Tuesday"
+
+msgid "Used as a folder name on the NAS to separate multiple printers."
+msgstr "Used as a folder name on the NAS to separate multiple printers."
+
+msgid "Used for weekly schedule."
+msgstr "Used for weekly schedule."
+
+msgid "Username"
+msgstr "Username"
+
+msgid "Version:"
+msgstr "Version:"
+
+msgid "Wednesday"
+msgstr "Wednesday"
+
+msgid "Weekly"
+msgstr "Weekly"
+
+msgid "Yearly"
+msgstr "Yearly"
+
+msgid "ZIPs kept on SD card — older ones deleted to reduce write wear."
+msgstr "ZIPs kept on SD card — older ones deleted to reduce write wear."
+
+msgid "files"
+msgstr "files"
+
+msgid "idle"
+msgstr "idle"
+
+msgid "is installed on the OctoPrint host."
+msgstr "is installed on the OctoPrint host."
+
+msgid "of old snapshots on the NAS"
+msgstr "of old snapshots on the NAS"
+
+msgid "smbclient is installed."
+msgstr "smbclient is installed."
+
+msgid "smbclient is not installed. Run:"
+msgstr "smbclient is not installed. Run:"
+
+msgid "sub-folders and the"
+msgstr "sub-folders and the"
+
+msgid "timelapse"
+msgstr "timelapse"
+
+msgid "uploads"
+msgstr "uploads"
+
+msgid "variable."
+msgstr "variable."
+
