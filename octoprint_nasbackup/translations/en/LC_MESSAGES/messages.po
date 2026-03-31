@@ -384,3 +384,6 @@ msgstr "Result (example 1):"
 
 msgid "Result (example 2):"
 msgstr "Result (example 2):"
+
+msgid "Example:"
+msgstr "Example:"

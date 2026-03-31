@@ -190,9 +190,13 @@ $(function () {
                 .done(function (data) {
                     self.backupRunning(data.running === true);
                     self.startupPending(data.startup_pending === true);
-                    self.lastStatus(data.last_status || {
+                    var incomingStatus = data.last_status || {
                         status: "never", message: tr("No backup run yet."), time: null
-                    });
+                    };
+                    if (incomingStatus && incomingStatus.message) {
+                        incomingStatus.message = translateBackendMessage(incomingStatus.message);
+                    }
+                    self.lastStatus(incomingStatus);
                     self.nextRun(data.next_run || null);
                     self.pluginVersion(data.plugin_version || "?");
                     self.smbclientInstalled(data.smbclient_installed === true);
