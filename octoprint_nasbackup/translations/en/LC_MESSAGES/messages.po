@@ -264,9 +264,6 @@ msgstr "Schedule"
 msgid "Schedule type"
 msgstr "Schedule type"
 
-msgid "Server / Printer Name"
-msgstr "Server / Printer Name"
-
 msgid "Share name"
 msgstr "Share name"
 
@@ -317,9 +314,6 @@ msgstr "Time"
 
 msgid "Tuesday"
 msgstr "Tuesday"
-
-msgid "Used as a folder name on the NAS to separate multiple printers."
-msgstr "Used as a folder name on the NAS to separate multiple printers."
 
 msgid "Used for weekly schedule."
 msgstr "Used for weekly schedule."

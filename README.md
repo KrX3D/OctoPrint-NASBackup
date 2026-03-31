@@ -54,8 +54,8 @@ Open OctoPrint → Settings → **NAS Backup**.
 | Tab | What it controls |
 |-----|-----------------|
 | **Schedule** | When to run (daily/weekly/monthly/disabled), time, idle-only guard |
-| **NAS Connection** | SMB credential setup, dependency status, connection testing |
-| **Backup Options** | OctoPrint ZIP excludes, local ZIP keep count, server name |
+| **NAS Connection** | SMB credential setup, server name mode, dependency status, connection testing |
+| **Backup Options** | OctoPrint ZIP excludes, local ZIP keep count |
 | **System Files** | Extra files/dirs to tar and upload alongside the ZIP |
 | **Retention** | GFS: how many daily/weekly/monthly/yearly snapshots to keep |
 | **Status** | Last result, next scheduled run, manual trigger, live log |
@@ -68,8 +68,8 @@ The plugin now includes initial translations for:
 
 OctoPrint will use the active UI language automatically, falling back to English strings if a translation is missing.
 
-> Translation files follow gettext/Babel layout and **must** live under  
-> `translations/<lang>/LC_MESSAGES/messages.po` + `messages.mo`.
+> Translation files follow gettext/Babel layout under  
+> `translations/<lang>/LC_MESSAGES/messages.po` (+ compiled `messages.mo` for runtime).
 >
 > This repository stores the editable `.po` files.  
 > If your workflow cannot handle binary files in PRs, compile `.mo` files locally when building/releasing:
@@ -217,5 +217,5 @@ The plugin ships with these defaults (from `get_settings_defaults()`):
 
 ### 0.3.19
 - Removed compiled `.mo` binaries from repository to avoid PR systems that reject binary diffs.
+- Added translation compile workflow that uploads compiled catalogs as CI artifacts.
 - Added README instructions to compile translation catalogs locally during build/release.
-
