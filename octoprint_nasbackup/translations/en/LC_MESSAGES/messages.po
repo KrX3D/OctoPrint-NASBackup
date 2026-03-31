@@ -387,3 +387,12 @@ msgstr "Result (example 2):"
 
 msgid "Example:"
 msgstr "Example:"
+
+msgid "sub-folders."
+msgstr "sub-folders."
+
+msgid "The server/printer name from the section below is appended automatically."
+msgstr "The server/printer name from the section below is appended automatically."
+
+msgid "No backup has been run yet."
+msgstr "No backup has been run yet."

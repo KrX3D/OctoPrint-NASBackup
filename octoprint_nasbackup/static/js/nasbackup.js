@@ -11,6 +11,9 @@ $(function () {
 
     var translateBackendMessage = function (message) {
         if (!message) { return message; }
+        if (message === "No backup has been run yet.") {
+            return tr("No backup has been run yet.");
+        }
         if (message === "SMB connection successful.") {
             return tr("SMB connection successful.");
         }

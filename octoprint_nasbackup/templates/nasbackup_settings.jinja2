@@ -203,10 +203,37 @@
                                data-bind="value: settings.smb_subdir"
                                placeholder="OctoPrint">
                         <span class="help-block muted">
-                            {{ _("Path inside the share. Supports") }} <code>/</code> {{ _("sub-folders and the") }} <code>{hostname}</code> {{ _("variable.") }}<br>
-                            {{ _("Example:") }} <code>RaspberryPi/Backup</code><br>
-                            {{ _("Result:") }} <code>\\hostip\share\RaspberryPi\Backup\{hostname}\timestamp\</code>
+                            {{ _("Path inside the share. Supports") }} <code>/</code> {{ _("sub-folders.") }}<br>
+                            {{ _("The server/printer name from the section below is appended automatically.") }}<br>
+                            {{ _("Result:") }} <code>\\hostip\share\subdir\server_name\timestamp\</code>
                         </span>
+                    </div>
+                </div>
+
+                <hr style="margin:14px 0 10px;">
+                <p class="nasbackup-section-heading">{{ _("Server / Printer Name") }}</p>
+                <p class="muted" style="font-size:11px; margin-bottom:10px;">
+                    {{ _("Used as a folder name on the NAS to separate multiple printers.") }}
+                </p>
+
+                <div class="control-group">
+                    <div class="controls">
+                        <label class="radio">
+                            <input type="radio" name="nasbackup_snm" value="true"
+                                   data-bind="checked: settings.server_name_auto">
+                            {{ _("Auto-detect from OctoPrint appearance name") }}
+                            {{ _("(falls back to hostname)") }}
+                        </label>
+                        <label class="radio"
+                               style="display:flex; align-items:center; gap:8px; margin-top:6px;">
+                            <input type="radio" name="nasbackup_snm" value="false"
+                                   data-bind="checked: settings.server_name_auto">
+                            <span style="white-space:nowrap;">{{ _("Manual:") }}</span>
+                            <input type="text" style="width:160px; margin:0;"
+                                   data-bind="value: settings.server_name_manual,
+                                              enable: !serverNameAuto()"
+                                   placeholder="MyPrinter">
+                        </label>
                     </div>
                 </div>
 
@@ -296,33 +323,6 @@
                     <span class="help-inline muted">
                         {{ _("ZIPs kept on SD card — older ones deleted to reduce write wear.") }}
                     </span>
-                </div>
-            </div>
-
-            <hr style="margin:14px 0 10px;">
-            <p class="nasbackup-section-heading">{{ _("Server / Printer Name") }}</p>
-            <p class="muted" style="font-size:11px; margin-bottom:10px;">
-                {{ _("Used as a folder name on the NAS to separate multiple printers.") }}
-            </p>
-
-            <div class="control-group">
-                <div class="controls">
-                    <label class="radio">
-                        <input type="radio" name="nasbackup_snm" value="true"
-                               data-bind="checked: settings.server_name_auto">
-                        {{ _("Auto-detect from OctoPrint appearance name") }}
-                        {{ _("(falls back to hostname)") }}
-                    </label>
-                    <label class="radio"
-                           style="display:flex; align-items:center; gap:8px; margin-top:6px;">
-                        <input type="radio" name="nasbackup_snm" value="false"
-                               data-bind="checked: settings.server_name_auto">
-                        <span style="white-space:nowrap;">{{ _("Manual:") }}</span>
-                        <input type="text" style="width:160px; margin:0;"
-                               data-bind="value: settings.server_name_manual,
-                                          enable: !serverNameAuto()"
-                               placeholder="MyPrinter">
-                    </label>
                 </div>
             </div>
 

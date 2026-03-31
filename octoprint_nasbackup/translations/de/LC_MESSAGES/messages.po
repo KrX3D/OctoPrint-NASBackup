@@ -387,3 +387,12 @@ msgstr "Ergebnis (Beispiel 2):"
 
 msgid "Example:"
 msgstr "Beispiel:"
+
+msgid "sub-folders."
+msgstr "Unterordner."
+
+msgid "The server/printer name from the section below is appended automatically."
+msgstr "Der Server-/Druckername aus dem Abschnitt unten wird automatisch angehängt."
+
+msgid "No backup has been run yet."
+msgstr "Es wurde noch kein Backup ausgeführt."
