@@ -20,7 +20,7 @@ $(function () {
         self.startupPending = ko.observable(false);
         self.nextRun        = ko.observable(null);
         self.lastStatus     = ko.observable({
-            status: "never", message: "No backup run yet.", time: null
+            status: "never", message: tr("No backup run yet."), time: null
         });
         self.logs           = ko.observableArray([]);
         self.statusPolling  = null;
@@ -28,7 +28,7 @@ $(function () {
         self.triggerBusy = ko.observable(false);
         self.testBusy    = ko.observable(false);
         self.smbclientInstalled   = ko.observable(true);
-        self.smbclientInstallHint = ko.observable("sudo apt install smbclient");
+            self.smbclientInstallHint = ko.observable("sudo apt install smbclient");
         self.pluginVersion = ko.observable("?");
 
         // settings is set in onBeforeBinding — null until then.
@@ -93,8 +93,11 @@ $(function () {
 
         self.statusLabel = ko.computed(function () {
             var map = {
-                success: "Success", failed: "Failed",
-                running: "Running...", skipped: "Skipped", never: "Never run"
+                success: tr("Success"),
+                failed: tr("Failed"),
+                running: tr("Running..."),
+                skipped: tr("Skipped"),
+                never: tr("Never run")
             };
             return map[self.lastStatus().status] || (self.lastStatus().status || "never");
         });
@@ -150,9 +153,17 @@ $(function () {
                     running: "info",
                     never: "info"
                 };
+                var statusLabelMap = {
+                    success: tr("Success"),
+                    failed: tr("Failed"),
+                    skipped: tr("Skipped"),
+                    running: tr("Running..."),
+                    never: tr("Never run")
+                };
+                var translatedStatus = statusLabelMap[data.status] || (data.status || tr("Status"));
                 new PNotify({
                     title: tr("NAS Backup"),
-                    text: (data.status || "status") + ": " + (data.message || ""),
+                    text: translatedStatus + ": " + (data.message || ""),
                     type: typeMap[data.status] || "info",
                     hide: true
                 });
@@ -168,7 +179,7 @@ $(function () {
                     self.backupRunning(data.running === true);
                     self.startupPending(data.startup_pending === true);
                     self.lastStatus(data.last_status || {
-                        status: "never", message: "", time: null
+                        status: "never", message: tr("No backup run yet."), time: null
                     });
                     self.nextRun(data.next_run || null);
                     self.pluginVersion(data.plugin_version || "?");
