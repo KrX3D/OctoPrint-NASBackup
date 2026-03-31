@@ -264,7 +264,6 @@ msgstr "Zeitplan"
 msgid "Schedule type"
 msgstr "Zeitplantyp"
 
-
 msgid "Share name"
 msgstr "Freigabename"
 
@@ -315,7 +314,6 @@ msgstr "Uhrzeit"
 
 msgid "Tuesday"
 msgstr "Dienstag"
-
 
 msgid "Used for weekly schedule."
 msgstr "Wird für den wöchentlichen Zeitplan verwendet."

@@ -264,7 +264,6 @@ msgstr "Schedule"
 msgid "Schedule type"
 msgstr "Schedule type"
 
-
 msgid "Share name"
 msgstr "Share name"
 
@@ -315,7 +314,6 @@ msgstr "Time"
 
 msgid "Tuesday"
 msgstr "Tuesday"
-
 
 msgid "Used for weekly schedule."
 msgstr "Used for weekly schedule."
