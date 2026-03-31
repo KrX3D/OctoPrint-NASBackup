@@ -71,8 +71,8 @@ OctoPrint will use the active UI language automatically, falling back to English
 > Translation files follow gettext/Babel layout under  
 > `translations/<lang>/LC_MESSAGES/messages.po` (+ compiled `messages.mo` for runtime).
 >
-> This repository stores the editable `.po` files only (no binary `.mo` in PRs).  
-> Compile `.mo` files locally when building/releasing:
+> This repository stores the editable `.po` files.  
+> If your workflow cannot handle binary files in PRs, compile `.mo` files locally when building/releasing:
 > ```bash
 > msgfmt octoprint_nasbackup/translations/de/LC_MESSAGES/messages.po -o octoprint_nasbackup/translations/de/LC_MESSAGES/messages.mo
 > msgfmt octoprint_nasbackup/translations/en/LC_MESSAGES/messages.po -o octoprint_nasbackup/translations/en/LC_MESSAGES/messages.mo
