@@ -5,153 +5,181 @@
     <div class="nasbackup-master-toggle">
         <input type="checkbox" id="nasbackup_enabled"
                data-bind="checked: settings.enabled">
-        <label for="nasbackup_enabled">Enable NAS Backup Plugin</label>
-        <!-- ko if: !isEnabled() -->
+        <label for="nasbackup_enabled">{{ _("Enable NAS Backup Plugin") }}</label>
         <span class="muted" style="font-size:11px; font-weight:normal;">
-            (plugin is disabled — no scheduled backups will run)
+            {{ _("Version:") }} <span data-bind="text: pluginVersion"></span>
         </span>
-        <!-- /ko -->
     </div>
 
     <ul class="nav nav-tabs" id="nasbackup_tabs">
-        <li class="active"><a href="#nasbackup_tab_schedule"  data-toggle="tab">Schedule</a></li>
-        <li><a href="#nasbackup_tab_nas"       data-toggle="tab">NAS Connection</a></li>
-        <li><a href="#nasbackup_tab_options"   data-toggle="tab">Backup Options</a></li>
-        <li><a href="#nasbackup_tab_system"    data-toggle="tab">System Files</a></li>
-        <li><a href="#nasbackup_tab_retention" data-toggle="tab">Retention</a></li>
+        <li class="active"><a href="#nasbackup_tab_schedule"  data-toggle="tab">{{ _("Schedule") }}</a></li>
+        <li><a href="#nasbackup_tab_nas"       data-toggle="tab">{{ _("NAS Connection") }}</a></li>
+        <li><a href="#nasbackup_tab_options"   data-toggle="tab">{{ _("Backup Options") }}</a></li>
+        <li><a href="#nasbackup_tab_system"    data-toggle="tab">{{ _("System Files") }}</a></li>
+        <li><a href="#nasbackup_tab_retention" data-toggle="tab">{{ _("Retention") }}</a></li>
         <li><a href="#nasbackup_tab_status"    data-toggle="tab"
-               data-bind="click: refreshStatus">Status / Log</a></li>
+               data-bind="click: refreshStatus">{{ _("Status / Log") }}</a></li>
     </ul>
 
     <div class="tab-content" style="padding-top:14px;">
 
         <div class="tab-pane active" id="nasbackup_tab_schedule">
-            <p class="nasbackup-section-heading">Backup Schedule</p>
+            <p class="nasbackup-section-heading">{{ _("Backup Schedule") }}</p>
 
             <div class="control-group">
-                <label class="control-label">Schedule type</label>
+                <label class="control-label">{{ _("Schedule type") }}</label>
                 <div class="controls">
-                    <select data-bind="value: settings.schedule_type">
-                        <option value="daily">Daily</option>
-                        <option value="weekly">Weekly (same weekday)</option>
-                        <option value="monthly">Monthly (fixed day-of-month)</option>
-                        <option value="disabled">Disabled (manual only)</option>
-                    </select>
+                    <div class="btn-group nasbackup-schedule-group" data-toggle="buttons-radio">
+                        <button class="btn btn-small"
+                                data-bind="click: function(){ settings.schedule_type('daily'); },
+                                           css: { active: scheduleType() === 'daily' }">
+                            {{ _("Daily") }}
+                        </button>
+                        <button class="btn btn-small"
+                                data-bind="click: function(){ settings.schedule_type('weekly'); },
+                                           css: { active: scheduleType() === 'weekly' }">
+                            {{ _("Weekly") }}
+                        </button>
+                        <button class="btn btn-small"
+                                data-bind="click: function(){ settings.schedule_type('monthly'); },
+                                           css: { active: scheduleType() === 'monthly' }">
+                            {{ _("Monthly") }}
+                        </button>
+                        <button class="btn btn-small"
+                                data-bind="click: function(){ settings.schedule_type('disabled'); },
+                                           css: { active: scheduleType() === 'disabled' }">
+                            {{ _("Manual only") }}
+                        </button>
+                    </div>
                 </div>
             </div>
 
-            <!-- ko if: scheduleType() !== 'disabled' -->
             <div class="control-group">
-                <label class="control-label">Time</label>
+                <label class="control-label">{{ _("Time") }}</label>
                 <div class="controls">
                     <input type="time" style="width:110px;"
-                           data-bind="value: settings.schedule_time"
+                           data-bind="value: settings.schedule_time, enable: scheduleType() !== 'disabled'"
                            placeholder="03:00">
-                    <span class="help-inline muted">HH:MM — device local timezone</span>
+                    <span class="help-inline muted">
+                        {{ _("HH:MM — device local timezone") }}
+                    </span>
                 </div>
             </div>
-            <!-- /ko -->
 
-            <!-- ko if: scheduleType() === 'weekly' -->
             <div class="control-group">
-                <label class="control-label">Day of week</label>
+                <label class="control-label">{{ _("Day of week") }}</label>
                 <div class="controls">
                     <select data-bind="value: settings.schedule_day_of_week">
-                        <option value="0">Monday</option>
-                        <option value="1">Tuesday</option>
-                        <option value="2">Wednesday</option>
-                        <option value="3">Thursday</option>
-                        <option value="4">Friday</option>
-                        <option value="5">Saturday</option>
-                        <option value="6">Sunday</option>
+                        <option value="0">{{ _("Monday") }}</option>
+                        <option value="1">{{ _("Tuesday") }}</option>
+                        <option value="2">{{ _("Wednesday") }}</option>
+                        <option value="3">{{ _("Thursday") }}</option>
+                        <option value="4">{{ _("Friday") }}</option>
+                        <option value="5">{{ _("Saturday") }}</option>
+                        <option value="6">{{ _("Sunday") }}</option>
                     </select>
+                    <span class="help-inline muted">{{ _("Used for weekly schedule.") }}</span>
                 </div>
             </div>
-            <!-- /ko -->
 
-            <!-- ko if: scheduleType() === 'monthly' -->
             <div class="control-group">
-                <label class="control-label">Day of month</label>
+                <label class="control-label">{{ _("Day of month") }}</label>
                 <div class="controls">
                     <input type="number" min="1" max="28" style="width:70px;"
                            data-bind="value: settings.schedule_day_of_month">
-                    <span class="help-inline muted">1-28</span>
+                    <span class="help-inline muted">{{ _("1-28, used for monthly schedule.") }}</span>
                 </div>
             </div>
-            <!-- /ko -->
 
             <div class="control-group">
                 <div class="controls">
                     <label class="checkbox">
                         <input type="checkbox"
                                data-bind="checked: settings.only_when_idle">
-                        Only run when printer is <strong>idle</strong>
-                        (skip if printing or paused)
+                        {{ _("Only run when printer is") }} <strong>{{ _("idle") }}</strong>
+                        {{ _("(skip if printing or paused)") }}
                     </label>
                 </div>
             </div>
 
             <hr style="margin:14px 0 10px;">
-            <p class="nasbackup-section-heading">Startup Backup</p>
+            <p class="nasbackup-section-heading">{{ _("Startup Backup") }}</p>
 
             <div class="control-group">
                 <div class="controls">
                     <label class="checkbox">
                         <input type="checkbox"
                                data-bind="checked: settings.backup_on_startup">
-                        Run a backup automatically after OctoPrint starts
+                        {{ _("Run a backup automatically after OctoPrint starts/restarts") }}
                     </label>
                 </div>
             </div>
 
-            <!-- ko if: backupOnStartup() -->
             <div class="control-group">
-                <label class="control-label">Delay (seconds)</label>
+                <label class="control-label">{{ _("Delay (seconds)") }}</label>
                 <div class="controls">
                     <input type="number" min="10" max="3600" style="width:80px;"
                            data-bind="value: settings.startup_delay">
                     <span class="help-inline muted">
-                        Seconds to wait after OctoPrint starts. Default: 120
+                        {{ _("Seconds to wait after OctoPrint starts. Default: 10") }}
                     </span>
                 </div>
             </div>
-            <!-- /ko -->
+
+            <div class="control-group">
+                <label class="control-label">{{ _("Run on") }}</label>
+                <div class="controls">
+                    <p class="muted" style="font-size:11px; margin-bottom:8px;">
+                        {{ _("System restart is detected from a recent graceful shutdown marker (about 15 minutes).") }}
+                    </p>
+                    <label class="checkbox">
+                        <input type="checkbox"
+                               data-bind="checked: settings.backup_on_startup_cold_boot">
+                        {{ _("Fresh cold boot (power on / no recent shutdown marker)") }}
+                    </label>
+                    <label class="checkbox">
+                        <input type="checkbox"
+                               data-bind="checked: settings.backup_on_startup_system_restart">
+                        {{ _("System restart/reboot (detected graceful restart)") }}
+                    </label>
+                    <label class="checkbox">
+                        <input type="checkbox"
+                               data-bind="checked: settings.backup_on_startup_octoprint_restart">
+                        {{ _("OctoPrint service restart (same OS boot session)") }}
+                    </label>
+                </div>
+            </div>
         </div>
 
         <div class="tab-pane" id="nasbackup_tab_nas">
-            <p class="nasbackup-section-heading">Transfer Mode</p>
-
+            <p class="nasbackup-section-heading">{{ _("SMB Destination") }}</p>
+            <p class="muted" style="font-size:12px; margin-bottom:12px;">
+                {{ _("This plugin uses SMB only. Please ensure") }}
+                <code>smbclient</code> {{ _("is installed on the OctoPrint host.") }}
+            </p>
             <div class="control-group">
-                <label class="control-label">Mode</label>
                 <div class="controls">
-                    <select data-bind="value: settings.transfer_mode">
-                        <option value="local">Local path (fstab / NFS / pre-mounted share)</option>
-                        <option value="smbclient">SMB via smbclient (no mount needed)</option>
-                    </select>
+                    <!-- ko if: smbclientInstalled -->
+                    <div class="nasbackup-test-result ok">
+                        <i class="fas fa-check-circle"></i>
+                        {{ _("smbclient is installed.") }}
+                    </div>
+                    <!-- /ko -->
+                    <!-- ko ifnot: smbclientInstalled -->
+                    <div class="nasbackup-test-result err">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        {{ _("smbclient is not installed. Run:") }}
+                        <code data-bind="text: smbclientInstallHint"></code>
+                    </div>
+                    <!-- /ko -->
                 </div>
             </div>
 
-            <!-- ko if: transferMode() === 'local' -->
-            <div class="control-group">
-                <label class="control-label">Local backup path</label>
-                <div class="controls">
-                    <input type="text" class="input-block-level"
-                           data-bind="value: settings.local_path"
-                           placeholder="/mnt/octoprint_backup">
-                    <span class="help-block muted">
-                        Must be mounted and writable. Supports
-                        <code>{hostname}</code> variable.
-                    </span>
-                </div>
-            </div>
-            <!-- /ko -->
-
-            <!-- ko if: transferMode() === 'smbclient' -->
             <div>
-                <p class="nasbackup-section-heading" style="margin-top:4px;">SMB Credentials</p>
+                <p class="nasbackup-section-heading" style="margin-top:4px;">{{ _("SMB Credentials") }}</p>
 
                 <div class="control-group">
-                    <label class="control-label">Host / IP</label>
+                    <label class="control-label">{{ _("Host / IP") }}</label>
                     <div class="controls">
                         <input type="text" style="width:220px;"
                                data-bind="value: settings.smb_host"
@@ -160,7 +188,7 @@
                 </div>
 
                 <div class="control-group">
-                    <label class="control-label">Share name</label>
+                    <label class="control-label">{{ _("Share name") }}</label>
                     <div class="controls">
                         <input type="text" style="width:220px;"
                                data-bind="value: settings.smb_share"
@@ -169,23 +197,51 @@
                 </div>
 
                 <div class="control-group">
-                    <label class="control-label">Sub-directory</label>
+                    <label class="control-label">{{ _("Sub-directory") }}</label>
                     <div class="controls">
                         <input type="text" style="width:220px;"
                                data-bind="value: settings.smb_subdir"
                                placeholder="OctoPrint">
+                    </div>
+                </div>
+
+                <div class="control-group" style="margin-top:8px;">
+                    <label class="control-label">{{ _("Servername") }}</label>
+                </div>
+
+                <div class="control-group">
+                    <div class="controls">
+                        <label class="radio">
+                            <input type="radio" name="nasbackup_snm" value="true"
+                                   data-bind="checked: settings.server_name_auto">
+                            {{ _("Auto-detect from OctoPrint appearance name") }}
+                            {{ _("(falls back to hostname)") }}
+                        </label>
+                        <label class="radio"
+                               style="display:flex; align-items:center; gap:8px; margin-top:6px;">
+                            <input type="radio" name="nasbackup_snm" value="false"
+                                   data-bind="checked: settings.server_name_auto">
+                            <span style="white-space:nowrap;">{{ _("Manual:") }}</span>
+                            <input type="text" style="width:160px; margin:0;"
+                                   data-bind="value: settings.server_name_manual,
+                                              enable: !serverNameAuto()"
+                                   placeholder="MyPrinter">
+                        </label>
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <div class="controls">
                         <span class="help-block muted">
-                            Path inside the share. Supports <code>/</code> sub-folders
-                            and the <code>{hostname}</code> variable.<br>
-                            Examples: <code>RaspberryPi/Backup</code> |
-                            <code>Printers/{hostname}</code><br>
-                            Result: <code>\\host\share\subdir\server_name\snapshots\</code>
+                            {{ _("Path inside the share. Supports") }} <code>/</code> {{ _("sub-folders.") }}<br>
+                            {{ _("The server name is appended automatically (servername).") }}<br>
+                            {{ _("Result:") }} <code>\\hostip\share\subdir\servername\timestamp\</code>
                         </span>
                     </div>
                 </div>
 
                 <div class="control-group">
-                    <label class="control-label">Username</label>
+                    <label class="control-label">{{ _("Username") }}</label>
                     <div class="controls">
                         <input type="text" style="width:220px;" autocomplete="off"
                                data-bind="value: settings.smb_username">
@@ -193,7 +249,7 @@
                 </div>
 
                 <div class="control-group">
-                    <label class="control-label">Password</label>
+                    <label class="control-label">{{ _("Password") }}</label>
                     <div class="controls">
                         <input type="password" style="width:220px;"
                                autocomplete="new-password"
@@ -203,7 +259,7 @@
 
                 <div class="control-group">
                     <label class="control-label">
-                        Domain <small class="muted">(optional)</small>
+                        {{ _("Domain") }} <small class="muted">{{ _("(optional)") }}</small>
                     </label>
                     <div class="controls">
                         <input type="text" style="width:180px;"
@@ -213,7 +269,7 @@
                 </div>
 
                 <div class="control-group">
-                    <label class="control-label">SMB version</label>
+                    <label class="control-label">{{ _("SMB version") }}</label>
                     <div class="controls">
                         <select data-bind="value: settings.smb_version"
                                 style="width:100px;">
@@ -225,94 +281,51 @@
                     </div>
                 </div>
             </div>
-            <!-- /ko -->
 
             <hr style="margin:14px 0 10px;">
-            <p class="nasbackup-section-heading">Connection Test</p>
+            <p class="nasbackup-section-heading">{{ _("Connection Test") }}</p>
             <div class="control-group">
                 <div class="controls">
                     <button class="btn btn-small"
                             data-bind="click: testConnection, enable: !testBusy()">
                         <!-- ko ifnot: testBusy -->
-                        <i class="fas fa-plug"></i> Test Connection
+                        <i class="fas fa-plug"></i> {{ _("Test Connection") }}
                         <!-- /ko -->
                         <!-- ko if: testBusy -->
-                        <i class="fas fa-spinner fa-spin"></i> Testing...
+                        <i class="fas fa-spinner fa-spin"></i> {{ _("Testing...") }}
                         <!-- /ko -->
                     </button>
-
-                    <!-- ko if: testResult() !== null -->
-                    <!-- ko if: testResult().success -->
-                    <div class="nasbackup-test-result ok" style="margin-top:8px;">
-                        <i class="fas fa-check-circle"></i>
-                        <span data-bind="text: testResult().message"></span>
-                    </div>
-                    <!-- /ko -->
-                    <!-- ko ifnot: testResult().success -->
-                    <div class="nasbackup-test-result err" style="margin-top:8px;">
-                        <i class="fas fa-times-circle"></i>
-                        <span data-bind="text: testResult().message"></span>
-                    </div>
-                    <!-- /ko -->
-                    <!-- /ko -->
                 </div>
             </div>
         </div>
 
         <div class="tab-pane" id="nasbackup_tab_options">
-            <p class="nasbackup-section-heading">OctoPrint ZIP Backup</p>
+            <p class="nasbackup-section-heading">{{ _("OctoPrint ZIP Backup") }}</p>
 
             <div class="control-group">
                 <div class="controls">
                     <label class="checkbox">
                         <input type="checkbox"
                                data-bind="checked: settings.exclude_timelapse">
-                        Exclude <strong>timelapse</strong> files
-                        (recommended — can be very large)
+                        {{ _("Exclude") }} <strong>{{ _("timelapse") }}</strong> {{ _("files") }}
+                        {{ _("(recommended — can be very large)") }}
                     </label>
                     <label class="checkbox">
                         <input type="checkbox"
                                data-bind="checked: settings.exclude_uploads">
-                        Exclude <strong>uploads</strong> (GCODE files)
+                        {{ _("Exclude") }} <strong>{{ _("uploads") }}</strong> {{ _("(GCODE files)") }}
                     </label>
                 </div>
             </div>
 
             <div class="control-group">
-                <label class="control-label">Local ZIP keep count</label>
+                <label class="control-label">{{ _("Local ZIP keep count") }}</label>
                 <div class="controls">
                     <input type="number" min="1" max="99" style="width:70px;"
                            data-bind="value: settings.local_keep_count">
                     <span class="help-inline muted">
-                        ZIPs kept on SD card — older ones deleted to reduce write wear.
+                        {{ _("ZIPs kept on SD card — older ones deleted to reduce write wear.") }}
                     </span>
-                </div>
-            </div>
-
-            <hr style="margin:14px 0 10px;">
-            <p class="nasbackup-section-heading">Server / Printer Name</p>
-            <p class="muted" style="font-size:11px; margin-bottom:10px;">
-                Used as a folder name on the NAS to separate multiple printers.
-            </p>
-
-            <div class="control-group">
-                <div class="controls">
-                    <label class="radio">
-                        <input type="radio" name="nasbackup_snm" value="true"
-                               data-bind="checked: settings.server_name_auto">
-                        Auto-detect from OctoPrint appearance name
-                        (falls back to hostname)
-                    </label>
-                    <label class="radio"
-                           style="display:flex; align-items:center; gap:8px; margin-top:6px;">
-                        <input type="radio" name="nasbackup_snm" value="false"
-                               data-bind="checked: settings.server_name_auto">
-                        <span style="white-space:nowrap;">Manual:</span>
-                        <input type="text" style="width:160px; margin:0;"
-                               data-bind="value: settings.server_name_manual,
-                                          enable: !serverNameAuto()"
-                               placeholder="MyPrinter">
-                    </label>
                 </div>
             </div>
 
@@ -322,124 +335,119 @@
                     <label class="checkbox">
                         <input type="checkbox"
                                data-bind="checked: settings.copy_log_to_nas">
-                        Copy backup log to NAS alongside each snapshot
+                        {{ _("Copy backup log to NAS alongside each snapshot") }}
                     </label>
                 </div>
             </div>
         </div>
 
         <div class="tab-pane" id="nasbackup_tab_system">
-            <p class="nasbackup-section-heading">System Files Backup</p>
+            <p class="nasbackup-section-heading">{{ _("System Files Backup") }}</p>
 
             <div class="control-group">
                 <div class="controls">
                     <label class="checkbox">
                         <input type="checkbox"
                                data-bind="checked: settings.system_backup_enabled">
-                        <strong>Enable system files backup</strong>
+                        <strong>{{ _("Enable system files backup") }}</strong>
                     </label>
                 </div>
             </div>
 
-            <!-- ko if: systemBackupEnabled() -->
             <div class="control-group">
-                <label class="control-label">Paths to back up</label>
+                <label class="control-label">{{ _("Paths to back up") }}</label>
                 <div class="controls">
                     <textarea rows="10" class="input-block-level"
                               data-bind="value: settings.system_backup_items"
                               style="font-family:monospace; font-size:12px;"></textarea>
                     <span class="help-block muted">
-                        One path per line. Files and directories supported.<br>
-                        SMB: packed into <code>system_backup.tar.gz</code>.<br>
-                        Local: copied preserving directory structure.
+                        {{ _("One path per line. Files and directories supported.") }}<br>
+                        {{ _("SMB: packed into") }} <code>system_backup.tar.gz</code>.
                     </span>
                 </div>
             </div>
-            <!-- /ko -->
         </div>
 
         <div class="tab-pane" id="nasbackup_tab_retention">
-            <p class="nasbackup-section-heading">GFS Retention Policy</p>
+            <p class="nasbackup-section-heading">{{ _("GFS Retention Policy") }}</p>
 
             <div class="control-group">
                 <div class="controls">
                     <label class="checkbox">
                         <input type="checkbox"
                                data-bind="checked: settings.retention_enabled">
-                        <strong>Enable automatic pruning</strong>
-                        of old snapshots on the NAS
+                        <strong>{{ _("Enable automatic pruning") }}</strong>
+                        {{ _("of old snapshots on the NAS") }}
                     </label>
                 </div>
             </div>
 
-            <!-- ko if: retentionEnabled() -->
             <table class="table table-condensed" style="width:auto; margin-top:10px;">
                 <thead>
                     <tr>
-                        <th>Category</th>
-                        <th style="text-align:center;">Keep</th>
-                        <th style="padding-left:12px;">Description</th>
+                        <th>{{ _("Category") }}</th>
+                        <th style="text-align:center;">{{ _("Keep") }}</th>
+                        <th style="padding-left:12px;">{{ _("Description") }}</th>
                     </tr>
                 </thead>
                 <tbody>
                     <tr>
-                        <td><strong>Daily</strong></td>
+                        <td><strong>{{ _("Daily") }}</strong></td>
                         <td style="text-align:center;">
                             <input type="number" min="0" max="365" style="width:65px;"
                                    data-bind="value: settings.keep_daily">
                         </td>
-                        <td style="padding-left:12px; color:#666;">One per day for N days</td>
+                        <td style="padding-left:12px; color:#666;">{{ _("One per day for N days") }}</td>
                     </tr>
                     <tr>
-                        <td><strong>Weekly</strong></td>
+                        <td><strong>{{ _("Weekly") }}</strong></td>
                         <td style="text-align:center;">
                             <input type="number" min="0" max="104" style="width:65px;"
                                    data-bind="value: settings.keep_weekly">
                         </td>
-                        <td style="padding-left:12px; color:#666;">One per week for N weeks</td>
+                        <td style="padding-left:12px; color:#666;">{{ _("One per week for N weeks") }}</td>
                     </tr>
                     <tr>
-                        <td><strong>Monthly</strong></td>
+                        <td><strong>{{ _("Monthly") }}</strong></td>
                         <td style="text-align:center;">
                             <input type="number" min="0" max="120" style="width:65px;"
                                    data-bind="value: settings.keep_monthly">
                         </td>
-                        <td style="padding-left:12px; color:#666;">One per month for N months</td>
+                        <td style="padding-left:12px; color:#666;">{{ _("One per month for N months") }}</td>
                     </tr>
                     <tr>
-                        <td><strong>Yearly</strong></td>
+                        <td><strong>{{ _("Yearly") }}</strong></td>
                         <td style="text-align:center;">
                             <input type="number" min="0" max="50" style="width:65px;"
                                    data-bind="value: settings.keep_yearly">
                         </td>
-                        <td style="padding-left:12px; color:#666;">One per year for N years</td>
+                        <td style="padding-left:12px; color:#666;">{{ _("One per year for N years") }}</td>
                     </tr>
                 </tbody>
             </table>
             <p class="muted" style="font-size:11px; margin-top:4px;">
-                Newest snapshot in each window is kept; everything older is deleted.
+                {{ _("Newest snapshot in each window is kept; everything older is deleted.") }}
             </p>
-            <!-- /ko -->
         </div>
 
         <div class="tab-pane" id="nasbackup_tab_status">
-            <p class="nasbackup-section-heading">Current Status</p>
+            <p class="nasbackup-section-heading">{{ _("Current Status") }}</p>
 
             <table class="table table-condensed" style="width:auto; margin-bottom:12px;">
                 <tbody>
                     <tr>
-                        <td style="padding-right:16px;"><strong>Status</strong></td>
+                        <td style="padding-right:16px;"><strong>{{ _("Status") }}</strong></td>
                         <td>
                             <span class="nasbackup-status-badge"
                                   data-bind="text: statusLabel, css: statusClass"></span>
                         </td>
                     </tr>
                     <tr>
-                        <td><strong>Message</strong></td>
+                        <td><strong>{{ _("Message") }}</strong></td>
                         <td><span data-bind="text: lastStatus().message || '-'"></span></td>
                     </tr>
                     <tr>
-                        <td><strong>Last run</strong></td>
+                        <td><strong>{{ _("Last run") }}</strong></td>
                         <td>
                             <!-- ko if: lastStatus().time -->
                             <span data-bind="text: lastStatus().time"></span>
@@ -450,22 +458,22 @@
                         </td>
                     </tr>
                     <tr>
-                        <td><strong>Next scheduled</strong></td>
+                        <td><strong>{{ _("Next scheduled") }}</strong></td>
                         <td>
                             <!-- ko if: nextRun -->
                             <span data-bind="text: nextRun"></span>
                             <!-- /ko -->
                             <!-- ko ifnot: nextRun -->
-                            <span class="muted">Not scheduled</span>
+                            <span class="muted">{{ _("Not scheduled") }}</span>
                             <!-- /ko -->
                         </td>
                     </tr>
                     <!-- ko if: startupPending -->
                     <tr>
-                        <td><strong>Startup backup</strong></td>
+                        <td><strong>{{ _("Startup backup") }}</strong></td>
                         <td>
                             <span class="nasbackup-status-badge nasbackup-status-running">
-                                Pending...
+                                {{ _("Pending...") }}
                             </span>
                         </td>
                     </tr>
@@ -477,36 +485,36 @@
                 <!-- ko ifnot: backupRunning -->
                 <button class="btn btn-primary btn-small"
                         data-bind="click: triggerBackup,
-                                   enable: !triggerBusy() && isEnabled()">
-                    <i class="fas fa-play"></i> Run Backup Now
+                                   enable: !triggerBusy() && smbclientInstalled()">
+                    <i class="fas fa-play"></i> {{ _("Run Backup Now") }}
                 </button>
                 <!-- /ko -->
                 <!-- ko if: backupRunning -->
                 <button class="btn btn-primary btn-small" disabled="disabled">
-                    <i class="fas fa-spinner fa-spin"></i> Backup running...
+                    <i class="fas fa-spinner fa-spin"></i> {{ _("Backup running...") }}
                 </button>
                 <!-- /ko -->
                 &nbsp;
                 <button class="btn btn-small" data-bind="click: refreshStatus">
-                    <i class="fas fa-sync-alt"></i> Refresh
+                    <i class="fas fa-sync-alt"></i> {{ _("Refresh") }}
                 </button>
                 &nbsp;
                 <button class="btn btn-small btn-danger" data-bind="click: clearLogs">
-                    <i class="fas fa-trash"></i> Clear log
+                    <i class="fas fa-trash"></i> {{ _("Clear log") }}
                 </button>
             </div>
 
-            <p class="nasbackup-section-heading">Backup Log</p>
+            <p class="nasbackup-section-heading">{{ _("Backup Log") }}</p>
 
             <!-- ko if: logs().length > 0 -->
             <div id="nasbackup_log_area" class="nasbackup-log"
                  data-bind="foreach: logs">
-                <div data-bind="text: $data, css: $parent.logLineClass($data)"></div>
+                <div class="log-line" data-bind="text: $data, css: $parent.logLineClass($data)"></div>
             </div>
             <!-- /ko -->
             <!-- ko if: logs().length === 0 -->
             <p class="muted" style="font-size:12px; margin-top:4px;">
-                No log entries yet. Run a backup or wait for the scheduled run.
+                {{ _("No log entries yet. Run a backup or wait for the scheduled run.") }}
             </p>
             <!-- /ko -->
         </div>
