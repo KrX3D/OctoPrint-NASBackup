@@ -1,0 +1,43 @@
+name: Compile gettext catalogs
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "octoprint_nasbackup/translations/**/*.po"
+      - ".github/workflows/compile-translations.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  compile:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install gettext
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gettext
+
+      - name: Compile .po to .mo
+        run: |
+          set -euo pipefail
+          while IFS= read -r -d '' po; do
+            mo="${po%.po}.mo"
+            msgfmt "$po" -o "$mo"
+            echo "Compiled $po -> $mo"
+          done < <(find octoprint_nasbackup/translations -type f -name "*.po" -print0)
+
+      - name: Upload compiled catalogs artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: compiled-mo-catalogs
+          path: octoprint_nasbackup/translations/**/*.mo
+          if-no-files-found: error

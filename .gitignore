@@ -21,3 +21,5 @@ env/
 
 # OctoPrint dev
 instance/
+# gettext binaries (build artifacts)
+octoprint_nasbackup/translations/**/LC_MESSAGES/*.mo
