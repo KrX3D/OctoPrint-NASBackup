@@ -396,3 +396,9 @@ msgstr "The server/printer name from the section below is appended automatically
 
 msgid "No backup has been run yet."
 msgstr "No backup has been run yet."
+
+msgid "Servername"
+msgstr "Servername"
+
+msgid "The server name is appended automatically (servername)."
+msgstr "The server name is appended automatically (servername)."

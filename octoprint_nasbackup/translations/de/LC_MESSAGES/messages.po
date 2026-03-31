@@ -396,3 +396,9 @@ msgstr "Der Server-/Druckername aus dem Abschnitt unten wird automatisch angehä
 
 msgid "No backup has been run yet."
 msgstr "Es wurde noch kein Backup ausgeführt."
+
+msgid "Servername"
+msgstr "Servername"
+
+msgid "The server name is appended automatically (servername)."
+msgstr "Der Servername wird automatisch angehängt (servername)."

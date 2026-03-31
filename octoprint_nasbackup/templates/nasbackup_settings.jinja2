@@ -202,19 +202,10 @@
                         <input type="text" style="width:220px;"
                                data-bind="value: settings.smb_subdir"
                                placeholder="OctoPrint">
-                        <span class="help-block muted">
-                            {{ _("Path inside the share. Supports") }} <code>/</code> {{ _("sub-folders.") }}<br>
-                            {{ _("The server/printer name from the section below is appended automatically.") }}<br>
-                            {{ _("Result:") }} <code>\\hostip\share\subdir\server_name\timestamp\</code>
-                        </span>
                     </div>
                 </div>
 
-                <hr style="margin:14px 0 10px;">
-                <p class="nasbackup-section-heading">{{ _("Server / Printer Name") }}</p>
-                <p class="muted" style="font-size:11px; margin-bottom:10px;">
-                    {{ _("Used as a folder name on the NAS to separate multiple printers.") }}
-                </p>
+                <p class="nasbackup-section-heading">{{ _("Servername") }}</p>
 
                 <div class="control-group">
                     <div class="controls">
@@ -236,6 +227,22 @@
                         </label>
                     </div>
                 </div>
+
+                <div class="control-group">
+                    <div class="controls">
+                        <span class="help-block muted">
+                            {{ _("Path inside the share. Supports") }} <code>/</code> {{ _("sub-folders.") }}<br>
+                            {{ _("The server name is appended automatically (servername).") }}<br>
+                            {{ _("Result:") }} <code>\\hostip\share\subdir\servername\timestamp\</code>
+                        </span>
+                    </div>
+                </div>
+
+                <hr style="margin:14px 0 10px;">
+                <p class="nasbackup-section-heading">{{ _("Server / Printer Name") }}</p>
+                <p class="muted" style="font-size:11px; margin-bottom:10px;">
+                    {{ _("Used as a folder name on the NAS to separate multiple printers.") }}
+                </p>
 
                 <div class="control-group">
                     <label class="control-label">{{ _("Username") }}</label>
