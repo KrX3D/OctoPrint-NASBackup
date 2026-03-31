@@ -110,7 +110,7 @@
                     <label class="checkbox">
                         <input type="checkbox"
                                data-bind="checked: settings.backup_on_startup">
-                        Run a backup automatically after OctoPrint starts/restarts
+                        {{ _("Run a backup automatically after OctoPrint starts/restarts") }}
                     </label>
                 </div>
             </div>
@@ -121,7 +121,7 @@
                     <input type="number" min="10" max="3600" style="width:80px;"
                            data-bind="value: settings.startup_delay">
                     <span class="help-inline muted">
-                        Seconds to wait after OctoPrint starts. Default: 10
+                        {{ _("Seconds to wait after OctoPrint starts. Default: 10") }}
                     </span>
                 </div>
             </div>
@@ -129,20 +129,23 @@
             <div class="control-group">
                 <label class="control-label">Run on</label>
                 <div class="controls">
+                    <p class="muted" style="font-size:11px; margin-bottom:8px;">
+                        {{ _("System restart is detected from a recent graceful shutdown marker (about 15 minutes).") }}
+                    </p>
                     <label class="checkbox">
                         <input type="checkbox"
                                data-bind="checked: settings.backup_on_startup_cold_boot">
-                        Fresh cold boot (power on / no recent shutdown marker)
+                        {{ _("Fresh cold boot (power on / no recent shutdown marker)") }}
                     </label>
                     <label class="checkbox">
                         <input type="checkbox"
                                data-bind="checked: settings.backup_on_startup_system_restart">
-                        System restart/reboot (detected graceful restart)
+                        {{ _("System restart/reboot (detected graceful restart)") }}
                     </label>
                     <label class="checkbox">
                         <input type="checkbox"
                                data-bind="checked: settings.backup_on_startup_octoprint_restart">
-                        OctoPrint service restart (same OS boot session)
+                        {{ _("OctoPrint service restart (same OS boot session)") }}
                     </label>
                 </div>
             </div>

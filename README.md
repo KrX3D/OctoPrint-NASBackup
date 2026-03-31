@@ -60,6 +60,14 @@ Open OctoPrint → Settings → **NAS Backup**.
 | **Retention** | GFS: how many daily/weekly/monthly/yearly snapshots to keep |
 | **Status** | Last result, next scheduled run, manual trigger, live log |
 
+### Translations
+
+The plugin now includes initial translations for:
+- **English** (`en`) fallback
+- **German** (`de`)
+
+OctoPrint will use the active UI language automatically, falling back to English strings if a translation is missing.
+
 ### Default option values
 
 The plugin ships with these defaults (from `get_settings_defaults()`):
@@ -193,3 +201,6 @@ The plugin ships with these defaults (from `get_settings_defaults()`):
 - Added monthly root log append file (`nasbackup-YYYY-MM.log`) that survives snapshot pruning.
 - Monthly root log entries now include clear separators between runs.
 
+### 0.3.18
+- Startup restart classification now consumes shutdown markers to reduce cold-boot misclassification after quick reboot cycles.
+- Added first translation bundles (English/German) for startup labels and key notifications.

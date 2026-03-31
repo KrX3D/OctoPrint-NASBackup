@@ -2,6 +2,12 @@
  * OctoPrint-NASBackup — nasbackup.js
  */
 $(function () {
+    var tr = function (text) {
+        try {
+            if (typeof gettext === "function") { return gettext(text); }
+        } catch (e) {}
+        return text;
+    };
 
     function NasBackupViewModel(parameters) {
         var self = this;
@@ -128,8 +134,8 @@ $(function () {
             if (plugin !== "nasbackup" || !data || !data.event) { return; }
             if (data.event === "scheduled_backup_started") {
                 new PNotify({
-                    title: "NAS Backup",
-                    text: "Scheduled backup started.",
+                    title: tr("NAS Backup"),
+                    text: tr("Scheduled backup started."),
                     type: "info",
                     hide: true
                 });
@@ -145,7 +151,7 @@ $(function () {
                     never: "info"
                 };
                 new PNotify({
-                    title: "NAS Backup",
+                    title: tr("NAS Backup"),
                     text: (data.status || "status") + ": " + (data.message || ""),
                     type: typeMap[data.status] || "info",
                     hide: true
@@ -180,8 +186,8 @@ $(function () {
             if (self.triggerBusy() || self.backupRunning()) { return; }
             if (!self.smbclientInstalled()) {
                 new PNotify({
-                    title: "NAS Backup",
-                    text: "smbclient is not installed. " + self.smbclientInstallHint(),
+                    title: tr("NAS Backup"),
+                    text: tr("smbclient is not installed.") + " " + self.smbclientInstallHint(),
                     type: "error"
                 });
                 return;
@@ -191,21 +197,21 @@ $(function () {
                 .done(function (data) {
                     if (data.success) {
                         new PNotify({
-                            title: "NAS Backup", text: "Backup started.",
+                            title: tr("NAS Backup"), text: tr("Backup started."),
                             type: "success", hide: true
                         });
                         self.backupRunning(true);
                         setTimeout(self.refreshStatus, 1000);
                     } else {
                         new PNotify({
-                            title: "NAS Backup",
-                            text: data.message || "Could not start backup.",
+                            title: tr("NAS Backup"),
+                            text: data.message || tr("Could not start backup."),
                             type: "error"
                         });
                     }
                 })
                 .fail(function () {
-                    new PNotify({title: "NAS Backup", text: "Request failed.", type: "error"});
+                    new PNotify({title: tr("NAS Backup"), text: tr("Request failed."), type: "error"});
                 })
                 .always(function () { self.triggerBusy(false); });
         };
@@ -216,16 +222,16 @@ $(function () {
             OctoPrint.simpleApiCommand("nasbackup", "test_connection", {})
                 .done(function (data) {
                     new PNotify({
-                        title: "NAS Backup",
-                        text: data.message || "Connection test finished.",
+                        title: tr("NAS Backup"),
+                        text: data.message || tr("Connection test finished."),
                         type: data.success ? "success" : "error",
                         hide: true
                     });
                 })
                 .fail(function () {
                     new PNotify({
-                        title: "NAS Backup",
-                        text: "Request to OctoPrint failed.",
+                        title: tr("NAS Backup"),
+                        text: tr("Request to OctoPrint failed."),
                         type: "error"
                     });
                 })

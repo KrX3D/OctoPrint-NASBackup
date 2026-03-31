@@ -212,6 +212,9 @@ class NasBackupPlugin(
         self._write_startup_state({
             "boot_id": self._get_boot_id(),
             "last_startup_ts": time.time(),
+            # consume marker after startup classification
+            "last_shutdown_ts": 0,
+            "last_shutdown_boot_id": None,
         })
 
     # ── ShutdownPlugin ────────────────────────────────────────────────────────
@@ -224,6 +227,7 @@ class NasBackupPlugin(
         self._write_startup_state({
             "boot_id": self._get_boot_id(),
             "last_shutdown_ts": time.time(),
+            "last_shutdown_boot_id": self._get_boot_id(),
         })
 
     # ── SimpleApiPlugin ───────────────────────────────────────────────────────
@@ -1096,7 +1100,13 @@ class NasBackupPlugin(
                 return "octoprint_restart"
 
             last_shutdown_ts = float(state.get("last_shutdown_ts") or 0)
-            if last_shutdown_ts > 0 and (time.time() - last_shutdown_ts) < 900:
+            last_shutdown_boot_id = state.get("last_shutdown_boot_id")
+            if (
+                last_shutdown_ts > 0
+                and (time.time() - last_shutdown_ts) < 900
+                and prev_boot_id
+                and last_shutdown_boot_id == prev_boot_id
+            ):
                 return "system_restart"
             return "cold_boot"
         except Exception:
@@ -1243,7 +1253,7 @@ class NasBackupPlugin(
 __plugin_name__         = "NAS Backup"
 __plugin_identifier__   = "nasbackup"
 __plugin_pythoncompat__ = ">=3.7,<4"
-__plugin_version__      = "0.3.17"
+__plugin_version__      = "0.3.18"
 __plugin_description__  = (
     "Automated OctoPrint backups to a NAS over SMB - "
     "scheduled (daily/weekly/monthly), GFS retention."
