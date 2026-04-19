@@ -1260,16 +1260,17 @@ class NasBackupPlugin(
 
 # -- Plugin registration -------------------------------------------------------
 
-from ._meta import (
-    name         as __plugin_name__,
-    identifier   as __plugin_identifier__,
-    version      as __plugin_version__,
-    pythoncompat as __plugin_pythoncompat__,
-    description  as __plugin_description__,
-    author       as __plugin_author__,
-    url          as __plugin_url__,
-    license      as __plugin_license__,
+__plugin_name__         = "NAS Backup"
+__plugin_identifier__   = "nasbackup"
+__plugin_pythoncompat__ = ">=3.7,<4"
+__plugin_version__      = "0.3.21"
+__plugin_description__  = (
+    "Automated OctoPrint backups to a NAS over SMB - "
+    "scheduled (daily/weekly/monthly), GFS retention."
 )
+__plugin_author__       = "KrX3D"
+__plugin_url__          = "https://github.com/KrX3D/OctoPrint-NASBackup"
+__plugin_license__      = "MIT"
 
 
 def __plugin_load__():

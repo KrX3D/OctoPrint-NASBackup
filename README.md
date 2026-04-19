@@ -22,7 +22,7 @@ Automated OctoPrint backups to a NAS over SMB with scheduling, configurable GFS 
 Install via OctoPrint's Plugin Manager using this URL:
 
 ```
-https://github.com/KrX3D/OctoPrint-NASBackup/archive/main.zip
+https://github.com/KrX3D/OctoPrint-NASBackup/archive/refs/heads/main.zip
 ```
 
 Or clone and install manually:
