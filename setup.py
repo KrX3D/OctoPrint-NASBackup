@@ -2,10 +2,17 @@
 # OctoPrint-NASBackup setup.py
 ########################################################################################################################
 
+import re
+
 plugin_identifier   = "nasbackup"
 plugin_package      = "octoprint_nasbackup"
 plugin_name         = "OctoPrint-NASBackup"
-plugin_version      = "0.3.20"
+
+# Single source of truth — version lives in __init__.py
+with open("octoprint_nasbackup/__init__.py", "r", encoding="utf-8") as _f:
+    _m = re.search(r'^__plugin_version__\s*=\s*[\'"]([^\'"]+)[\'"]', _f.read(), re.MULTILINE)
+    plugin_version = _m.group(1) if _m else "0.0.0"
+
 plugin_description  = "Automated OctoPrint backups to a NAS over SMB — scheduled backups and GFS retention."
 plugin_author       = "KrX3D"
 plugin_author_email = ""
