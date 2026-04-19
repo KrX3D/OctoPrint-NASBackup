@@ -1182,7 +1182,7 @@ class NasBackupPlugin(
         return [x.strip() for x in raw.splitlines() if x.strip()]
 
     def _write_log_file(self, path, text=None):
-        with open(path, "w") as f:
+        with open(path, "w", encoding="utf-8") as f:
             if text is not None:
                 f.write(text)
             else:
@@ -1190,7 +1190,7 @@ class NasBackupPlugin(
                     f.write(entry + "\n")
 
     def _write_metadata_file(self, path, zip_path, timestamp, server_name):
-        with open(path, "w") as f:
+        with open(path, "w", encoding="utf-8") as f:
             f.write(self._build_metadata_text(zip_path, timestamp, server_name))
 
     def _build_metadata_text(self, zip_path, timestamp, server_name):
@@ -1263,7 +1263,7 @@ class NasBackupPlugin(
 __plugin_name__         = "NAS Backup"
 __plugin_identifier__   = "nasbackup"
 __plugin_pythoncompat__ = ">=3.7,<4"
-__plugin_version__      = "0.3.19"
+__plugin_version__      = "0.3.20"
 __plugin_description__  = (
     "Automated OctoPrint backups to a NAS over SMB - "
     "scheduled (daily/weekly/monthly), GFS retention."
