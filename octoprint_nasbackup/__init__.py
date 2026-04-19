@@ -1260,7 +1260,7 @@ class NasBackupPlugin(
 
 # -- Plugin registration -------------------------------------------------------
 
-from octoprint_nasbackup._meta import (
+from ._meta import (
     name         as __plugin_name__,
     identifier   as __plugin_identifier__,
     version      as __plugin_version__,

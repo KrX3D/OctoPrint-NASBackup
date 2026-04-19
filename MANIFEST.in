@@ -1,5 +1,6 @@
 include README.md
 include LICENSE
+recursive-include octoprint_nasbackup *.py
 recursive-include octoprint_nasbackup/templates *
 recursive-include octoprint_nasbackup/static *
 recursive-include octoprint_nasbackup/translations *
