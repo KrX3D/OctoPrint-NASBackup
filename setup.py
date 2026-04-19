@@ -2,16 +2,9 @@
 # OctoPrint-NASBackup setup.py
 ########################################################################################################################
 
-plugin_identifier   = "nasbackup"
-plugin_package      = "octoprint_nasbackup"
-plugin_name         = "OctoPrint-NASBackup"
-plugin_version      = "0.3.19"
-plugin_description  = "Automated OctoPrint backups to a NAS over SMB — scheduled backups and GFS retention."
-plugin_author       = "KrX3D"
-plugin_author_email = ""
-plugin_url          = "https://github.com/KrX3D/OctoPrint-NASBackup"
-plugin_license      = "MIT"
-plugin_requires     = []
+import os, sys
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "octoprint_nasbackup"))
+import _meta
 
 ########################################################################################################################
 
@@ -24,20 +17,19 @@ except ImportError:
         "Could not import OctoPrint's setuptools. Make sure you are running this with "
         "the same Python installation that OctoPrint is installed in."
     )
-    import sys
     sys.exit(-1)
 
 setup_parameters = octoprint_setuptools.create_plugin_setup_parameters(
-    identifier  = plugin_identifier,
-    package     = plugin_package,
-    name        = plugin_name,
-    version     = plugin_version,
-    description = plugin_description,
-    author      = plugin_author,
-    mail        = plugin_author_email,
-    url         = plugin_url,
-    license     = plugin_license,
-    requires    = plugin_requires,
+    identifier  = _meta.identifier,
+    package     = "octoprint_nasbackup",
+    name        = _meta.name,
+    version     = _meta.version,
+    description = _meta.description,
+    author      = _meta.author,
+    mail        = "",
+    url         = _meta.url,
+    license     = _meta.license,
+    requires    = [],
 )
 
 if __name__ == "__main__":
