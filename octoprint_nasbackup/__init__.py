@@ -31,17 +31,28 @@ class NasBackupPlugin(
     octoprint.plugin.StartupPlugin,
     octoprint.plugin.ShutdownPlugin,
     octoprint.plugin.SimpleApiPlugin,
+    octoprint.plugin.EventHandlerPlugin,
 ):
 
     def __init__(self):
-        self._schedule_thread  = None
-        self._schedule_stop    = threading.Event()
+        self._schedule_thread     = None
+        self._schedule_stop       = threading.Event()
+        # Incremented every time _reschedule() runs; a running _schedule_loop()
+        # compares its captured value against this to know it has been
+        # superseded, even if the old thread is still blocked inside a
+        # long-running backup and doesn't notice _schedule_stop being set.
+        self._schedule_generation = 0
         self._startup_timer    = None
         self._next_run         = None   # datetime or None
         self._backup_running   = False
         self._backup_lock      = threading.Lock()
         self._log_entries      = deque(maxlen=MAX_LOG_ENTRIES)
         self._current_run_entries = None
+        # Set by on_event() once OctoPrint's own backup plugin reports the
+        # ZIP is finished, so _trigger_octoprint_backup() doesn't have to
+        # rely purely on polling with a fixed timeout.
+        self._backup_created_event = threading.Event()
+        self._backup_created_path  = None
         self._last_status      = {
             "status":  "never",
             "message": "No backup has been run yet.",
@@ -220,6 +231,7 @@ class NasBackupPlugin(
     # -- ShutdownPlugin --------------------------------------------------------
 
     def on_shutdown(self):
+        self._schedule_generation += 1
         self._schedule_stop.set()
         if self._startup_timer is not None:
             self._startup_timer.cancel()
@@ -229,6 +241,19 @@ class NasBackupPlugin(
             "last_shutdown_ts": time.time(),
             "last_shutdown_boot_id": self._get_boot_id(),
         })
+
+    # -- EventHandlerPlugin ------------------------------------------------
+
+    def on_event(self, event, payload):
+        # Fired by OctoPrint's own bundled backup plugin once its background
+        # thread has finished writing the ZIP. Used by
+        # _trigger_octoprint_backup() to detect completion without waiting
+        # out a fixed polling timeout.
+        if event == "plugin_backup_backup_created":
+            path = (payload or {}).get("path")
+            if path:
+                self._backup_created_path = path
+                self._backup_created_event.set()
 
     # -- SimpleApiPlugin -------------------------------------------------------
 
@@ -292,12 +317,22 @@ class NasBackupPlugin(
 
     def _reschedule(self):
         """Stop existing schedule thread and start a new one with current settings."""
-        # Signal old thread to stop
-        self._schedule_stop.set()
-        if self._schedule_thread and self._schedule_thread.is_alive():
-            self._schedule_thread.join(timeout=2)
+        # Bump the generation so any previous _schedule_loop() (even one
+        # currently blocked inside a long-running _run_backup() call) will
+        # recognize it has been superseded and exit instead of continuing to
+        # run alongside the new thread. Relying solely on join(timeout=2)
+        # here was not enough - a scheduled backup can easily run longer
+        # than 2s, and _schedule_stop.clear() right after would silently
+        # "unpause" that still-running old thread, leaving two schedule
+        # loops alive and both firing backups independently.
+        self._schedule_generation += 1
+        generation = self._schedule_generation
 
+        # Wake a currently-sleeping old thread so it notices sooner; harmless
+        # if no thread is waiting on it right now.
+        self._schedule_stop.set()
         self._schedule_stop.clear()
+
         self._next_run = None
 
         if not self._get_bool("enabled"):
@@ -324,16 +359,21 @@ class NasBackupPlugin(
         )
 
         self._schedule_thread = threading.Thread(
-            target=self._schedule_loop, name="nasbackup-scheduler", daemon=True
+            target=self._schedule_loop, args=(generation,), name="nasbackup-scheduler", daemon=True
         )
         self._schedule_thread.start()
 
-    def _schedule_loop(self):
+    def _schedule_loop(self, generation):
         """
         Runs in background thread. Sleeps until next_run, fires backup,
-        recalculates next_run, repeats.
+        recalculates next_run, repeats. Exits as soon as `generation` no
+        longer matches self._schedule_generation, i.e. _reschedule() has
+        started a newer loop.
         """
-        while not self._schedule_stop.is_set():
+        def superseded():
+            return self._schedule_generation != generation
+
+        while not superseded():
             now     = datetime.datetime.now()
             target  = self._next_run
 
@@ -343,13 +383,13 @@ class NasBackupPlugin(
             wait_seconds = (target - now).total_seconds()
 
             if wait_seconds > 0:
-                # Sleep in 30s chunks so we can respond to stop events
-                while wait_seconds > 0 and not self._schedule_stop.is_set():
+                # Sleep in 30s chunks so we can respond to being superseded
+                while wait_seconds > 0 and not superseded():
                     chunk = min(30, wait_seconds)
                     self._schedule_stop.wait(chunk)
                     wait_seconds -= chunk
 
-            if self._schedule_stop.is_set():
+            if superseded():
                 break
 
             # Fire backup
@@ -358,6 +398,9 @@ class NasBackupPlugin(
                 self._identifier, {"event": "scheduled_backup_started"}
             )
             self._run_backup(source="scheduled")
+
+            if superseded():
+                break
 
             # Calculate next run
             next_run = self._calc_next_run()
@@ -570,6 +613,9 @@ class NasBackupPlugin(
         before = set(glob.glob(os.path.join(backup_dir, "*.zip")))
         trigger_ts = time.time()
 
+        self._backup_created_path = None
+        self._backup_created_event.clear()
+
         try:
             kwargs = {}
             if excludes:
@@ -589,9 +635,27 @@ class NasBackupPlugin(
         if result and isinstance(result, str) and os.path.isfile(result):
             return result
 
-        # Some OctoPrint versions create backups asynchronously; wait for a new ZIP.
+        # OctoPrint's bundled backup plugin always creates the ZIP
+        # asynchronously in a background thread (create_backup() itself
+        # returns None) and fires "plugin_backup_backup_created" once done -
+        # wait on that via on_event() instead of blind polling, so we're not
+        # capped at a fixed timeout for large/slow backups.
+        if self._backup_created_event.wait(timeout=600):
+            path = self._backup_created_path
+            if path and os.path.isfile(path):
+                return path
+
+        # Fallback for OctoPrint versions/setups where that event doesn't
+        # fire: poll for a new ZIP appearing in the backup folder.
         deadline = time.time() + 180
         while time.time() < deadline:
+            if (
+                self._backup_created_event.is_set()
+                and self._backup_created_path
+                and os.path.isfile(self._backup_created_path)
+            ):
+                return self._backup_created_path
+
             after   = set(glob.glob(os.path.join(backup_dir, "*.zip")))
             new_zip = after - before
             if new_zip:
@@ -1263,7 +1327,7 @@ class NasBackupPlugin(
 __plugin_name__         = "NAS Backup"
 __plugin_identifier__   = "nasbackup"
 __plugin_pythoncompat__ = ">=3.7,<4"
-__plugin_version__      = "0.3.21"
+__plugin_version__      = "0.3.22"
 __plugin_description__  = (
     "Automated OctoPrint backups to a NAS over SMB - "
     "scheduled (daily/weekly/monthly), GFS retention."

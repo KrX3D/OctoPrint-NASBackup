@@ -219,3 +219,8 @@ The plugin ships with these defaults (from `get_settings_defaults()`):
 - Removed compiled `.mo` binaries from repository to avoid PR systems that reject binary diffs.
 - Added translation compile workflow that uploads compiled catalogs as CI artifacts.
 - Added README instructions to compile translation catalogs locally during build/release.
+
+### 0.3.22
+- Fixed a scheduler bug where changing settings (or an OctoPrint restart) while a scheduled backup was still running could leave the old scheduler thread alive alongside the new one, risking duplicate/overlapping scheduled backups.
+- Backup-ZIP completion is now detected via OctoPrint's own `plugin_backup_backup_created` event instead of relying solely on a fixed 180s poll, so large/slow backups are no longer at risk of a false "no ZIP detected" failure; the polling loop is kept as a fallback.
+- Normalized corrupted CR/CRLF line endings across the codebase and pinned LF via `.gitattributes`.
