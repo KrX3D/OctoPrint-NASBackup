@@ -1,0 +1,39 @@
+name: PR checks
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install gettext
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gettext
+
+      - name: Python syntax check
+        run: |
+          python -m py_compile setup.py octoprint_nasbackup/__init__.py
+
+      - name: JS syntax check
+        run: |
+          node --check octoprint_nasbackup/static/js/nasbackup.js
+
+      - name: Validate gettext catalogs compile
+        run: |
+          set -euo pipefail
+          while IFS= read -r -d '' po; do
+            msgfmt --check "$po" -o /dev/null
+            echo "OK: $po"
+          done < <(find octoprint_nasbackup/translations -type f -name "*.po" -print0)
