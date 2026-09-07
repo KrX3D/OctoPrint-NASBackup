@@ -6,7 +6,7 @@
         <input type="checkbox" id="nasbackup_enabled"
                data-bind="checked: settings.enabled">
         <label for="nasbackup_enabled">{{ _("Enable NAS Backup Plugin") }}</label>
-        <span class="muted" style="font-size:11px; font-weight:normal;">
+        <span class="muted nasbackup-version-label" style="font-size:11px; font-weight:normal;">
             {{ _("Version:") }} <span data-bind="text: pluginVersion"></span>
         </span>
     </div>
@@ -397,7 +397,7 @@
                             <input type="number" min="0" max="365" style="width:65px;"
                                    data-bind="value: settings.keep_daily">
                         </td>
-                        <td style="padding-left:12px; color:#666;">{{ _("One per day for N days") }}</td>
+                        <td class="muted" style="padding-left:12px;">{{ _("One per day for N days") }}</td>
                     </tr>
                     <tr>
                         <td><strong>{{ _("Weekly") }}</strong></td>
@@ -405,7 +405,7 @@
                             <input type="number" min="0" max="104" style="width:65px;"
                                    data-bind="value: settings.keep_weekly">
                         </td>
-                        <td style="padding-left:12px; color:#666;">{{ _("One per week for N weeks") }}</td>
+                        <td class="muted" style="padding-left:12px;">{{ _("One per week for N weeks") }}</td>
                     </tr>
                     <tr>
                         <td><strong>{{ _("Monthly") }}</strong></td>
@@ -413,7 +413,7 @@
                             <input type="number" min="0" max="120" style="width:65px;"
                                    data-bind="value: settings.keep_monthly">
                         </td>
-                        <td style="padding-left:12px; color:#666;">{{ _("One per month for N months") }}</td>
+                        <td class="muted" style="padding-left:12px;">{{ _("One per month for N months") }}</td>
                     </tr>
                     <tr>
                         <td><strong>{{ _("Yearly") }}</strong></td>
@@ -421,7 +421,7 @@
                             <input type="number" min="0" max="50" style="width:65px;"
                                    data-bind="value: settings.keep_yearly">
                         </td>
-                        <td style="padding-left:12px; color:#666;">{{ _("One per year for N years") }}</td>
+                        <td class="muted" style="padding-left:12px;">{{ _("One per year for N years") }}</td>
                     </tr>
                 </tbody>
             </table>

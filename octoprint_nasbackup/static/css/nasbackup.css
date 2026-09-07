@@ -18,15 +18,15 @@
     font-family: monospace;
     font-size: 11px;
     line-height: 1.5;
-    background: #f8f9fb;
-    color: #222;
+    background: rgba(128, 128, 128, 0.08);
+    color: inherit;
     padding: 8px 10px;
     border-radius: 4px;
     max-height: 280px;
     overflow-y: auto;
     white-space: normal;
     word-break: break-all;
-    border: 1px solid #d5d9e0;
+    border: 1px solid rgba(128, 128, 128, 0.25);
 }
 
 #settings_plugin_nasbackup .nasbackup-log .log-line {
@@ -35,8 +35,8 @@
 }
 
 #settings_plugin_nasbackup .nasbackup-log .log-error   { color: #f48771; }
-#settings_plugin_nasbackup .nasbackup-log .log-warning { color: #8a6d3b; }
-#settings_plugin_nasbackup .nasbackup-log .log-debug   { color: #6c757d; }
+#settings_plugin_nasbackup .nasbackup-log .log-warning { color: #e0a458; }
+#settings_plugin_nasbackup .nasbackup-log .log-debug   { color: #8a97a5; }
 
 #settings_plugin_nasbackup .nasbackup-test-result {
     margin-top: 8px;
@@ -51,10 +51,11 @@
     margin-top: 0;
     margin-bottom: 12px;
     padding-bottom: 6px;
-    border-bottom: 1px solid #e0e0e0;
+    border-bottom: 1px solid rgba(128, 128, 128, 0.3);
     font-size: 13px;
     font-weight: 600;
-    color: #444;
+    color: inherit;
+    opacity: 0.75;
     text-transform: uppercase;
     letter-spacing: 0.04em;
 }
@@ -62,21 +63,43 @@
 #settings_plugin_nasbackup .control-group { margin-bottom: 10px; }
 #settings_plugin_nasbackup .control-label { font-weight: 600; }
 
+/* Bootstrap's/theme's default "muted" and help-text colors are often a
+   fixed dark grey tuned for a light background, so they can end up almost
+   unreadable under a dark color scheme. Dim the actual inherited (already
+   theme-correct) text color instead of hardcoding one. */
+#settings_plugin_nasbackup .muted,
+#settings_plugin_nasbackup .help-inline,
+#settings_plugin_nasbackup .help-block {
+    color: inherit !important;
+    opacity: 0.65;
+}
+
 #settings_plugin_nasbackup .nasbackup-master-toggle {
     display: flex;
     align-items: center;
     gap: 10px;
-    background: #f5f5f5;
-    border: 1px solid #ddd;
+    background: rgba(128, 128, 128, 0.12);
+    border: 1px solid rgba(128, 128, 128, 0.3);
     border-radius: 4px;
     padding: 10px 14px;
     margin-bottom: 14px;
 }
+#settings_plugin_nasbackup .nasbackup-master-toggle input[type="checkbox"] {
+    margin: 0;
+}
 #settings_plugin_nasbackup .nasbackup-master-toggle label {
+    display: inline-flex;
+    align-items: center;
     font-size: 14px;
     font-weight: 700;
+    line-height: 1;
     margin: 0;
     cursor: pointer;
+}
+#settings_plugin_nasbackup .nasbackup-master-toggle .nasbackup-version-label {
+    display: inline-flex;
+    align-items: center;
+    line-height: 1;
 }
 
 #settings_plugin_nasbackup .nasbackup-schedule-group .btn {
