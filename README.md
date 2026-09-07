@@ -224,3 +224,7 @@ The plugin ships with these defaults (from `get_settings_defaults()`):
 - Fixed a scheduler bug where changing settings (or an OctoPrint restart) while a scheduled backup was still running could leave the old scheduler thread alive alongside the new one, risking duplicate/overlapping scheduled backups.
 - Backup-ZIP completion is now detected via OctoPrint's own `plugin_backup_backup_created` event instead of relying solely on a fixed 180s poll, so large/slow backups are no longer at risk of a false "no ZIP detected" failure; the polling loop is kept as a fallback.
 - Normalized corrupted CR/CRLF line endings across the codebase and pinned LF via `.gitattributes`.
+
+### 0.3.23
+- Fixed low-contrast text under dark color-scheme themes: the header bar (plugin name/version), section headings, help text, and the log viewer used hardcoded light-mode colors that could become unreadable against a dark background. They now use theme-aware translucent panels/borders and dim the actual inherited text color instead of a fixed grey.
+- Improved vertical alignment of the checkbox, plugin name, and version text in the header bar.
