@@ -23,6 +23,19 @@ import octoprint.plugin
 
 MAX_LOG_ENTRIES = 400
 
+# Raspberry Pi boot partition (the FAT partition visible when the SD card is
+# put into a Windows PC). Older images / OctoPi mount it at /boot, Bookworm
+# and newer at /boot/firmware. Paths that don't exist are skipped.
+BOOT_PARTITION_ITEMS = (
+    "/boot/config.txt",
+    "/boot/cmdline.txt",
+    "/boot/octopi.txt",
+    "/boot/octopi-network.txt",
+    "/boot/octopi-wpa-supplicant.txt",
+    "/boot/firmware/config.txt",
+    "/boot/firmware/cmdline.txt",
+)
+
 
 class NasBackupPlugin(
     octoprint.plugin.SettingsPlugin,
@@ -98,7 +111,8 @@ class NasBackupPlugin(
                 "/etc/hostname\n"
                 "/etc/hosts\n"
                 "/home/pi/.octoprint/config.yaml\n"
-                "/etc/crontab"
+                "/etc/crontab\n"
+                + "\n".join(BOOT_PARTITION_ITEMS)
             ),
             # Retention
             retention_enabled=True,
@@ -113,6 +127,21 @@ class NasBackupPlugin(
             server_name_manual="OctoPrint",
             copy_log_to_nas=False,
         )
+
+    def get_settings_version(self):
+        return 1
+
+    def on_settings_migrate(self, target, current):
+        if current is None or current < 1:
+            # Installs that already customized the path list keep their own
+            # list, so new defaults wouldn't reach them - append the boot
+            # partition files once. Untouched lists pick up the new default.
+            items = self._get_system_items()
+            missing = [x for x in BOOT_PARTITION_ITEMS if x not in items]
+            if items and missing:
+                self._settings.set(
+                    ["system_backup_items"], "\n".join(items + missing)
+                )
 
     def on_settings_save(self, data):
         old_enabled  = self._get_bool("enabled")
@@ -877,9 +906,16 @@ class NasBackupPlugin(
                 ["tar", "-czf", tar_path] + existing,
                 capture_output=True, text=True, timeout=300
             )
+            # tar exits 1 (file changed while reading) or 2 (e.g. a file not
+            # readable by this user) but still writes everything else - only
+            # give up if no archive was produced.
             if result.returncode != 0:
-                self._log("  [system] tar failed: {}".format(result.stderr.strip()), "WARNING")
-                return
+                if result.returncode in (1, 2) and os.path.getsize(tar_path) > 0:
+                    self._log("  [system] tar warning (partial archive): {}".format(
+                        result.stderr.strip()), "WARNING")
+                else:
+                    self._log("  [system] tar failed: {}".format(result.stderr.strip()), "WARNING")
+                    return
             remote_tar = "{}/system_backup.tar.gz".format(remote_snap)
             rc, out, err = self._smb_exec(
                 "put \"{}\" \"{}\"".format(tar_path, remote_tar)
@@ -1327,7 +1363,7 @@ class NasBackupPlugin(
 __plugin_name__         = "NAS Backup"
 __plugin_identifier__   = "nasbackup"
 __plugin_pythoncompat__ = ">=3.7,<4"
-__plugin_version__      = "0.3.23"
+__plugin_version__      = "0.3.24"
 __plugin_description__  = (
     "Automated OctoPrint backups to a NAS over SMB - "
     "scheduled (daily/weekly/monthly), GFS retention."

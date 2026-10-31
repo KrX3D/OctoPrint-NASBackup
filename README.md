@@ -107,7 +107,7 @@ The plugin ships with these defaults (from `get_settings_defaults()`):
 | `exclude_timelapse` | `true` |
 | `local_keep_count` | `5` |
 | `system_backup_enabled` | `false` |
-| `system_backup_items` | `/etc/fstab`, `/etc/hostname`, `/etc/hosts`, `/home/pi/.octoprint/config.yaml`, `/etc/crontab` |
+| `system_backup_items` | `/etc/fstab`, `/etc/hostname`, `/etc/hosts`, `/home/pi/.octoprint/config.yaml`, `/etc/crontab`, plus boot partition files: `/boot/{config,cmdline,octopi,octopi-network,octopi-wpa-supplicant}.txt`, `/boot/firmware/{config,cmdline}.txt` |
 | `retention_enabled` | `true` |
 | `keep_daily` | `7` |
 | `keep_weekly` | `8` |
@@ -228,3 +228,8 @@ The plugin ships with these defaults (from `get_settings_defaults()`):
 ### 0.3.23
 - Fixed low-contrast text under dark color-scheme themes: the header bar (plugin name/version), section headings, help text, and the log viewer used hardcoded light-mode colors that could become unreadable against a dark background. They now use theme-aware translucent panels/borders and dim the actual inherited text color instead of a fixed grey.
 - Improved vertical alignment of the checkbox, plugin name, and version text in the header bar.
+
+### 0.3.24
+- Default system files list now includes the Raspberry Pi boot partition config files (`config.txt`, `cmdline.txt`, `octopi*.txt`) for both `/boot` and `/boot/firmware` layouts; paths that don't exist are skipped.
+- Existing installs with a customized path list get the boot partition paths appended once via settings migration.
+- System files archive is still uploaded when `tar` only reports warnings (e.g. one unreadable file) instead of being discarded.
