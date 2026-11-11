@@ -233,3 +233,7 @@ The plugin ships with these defaults (from `get_settings_defaults()`):
 - Default system files list now includes the Raspberry Pi boot partition config files (`config.txt`, `cmdline.txt`, `octopi*.txt`) for both `/boot` and `/boot/firmware` layouts; paths that don't exist are skipped.
 - Existing installs with a customized path list get the boot partition paths appended once via settings migration.
 - System files archive is still uploaded when `tar` only reports warnings (e.g. one unreadable file) instead of being discarded.
+
+### 0.3.25
+- Fixed the Software Update install URL (`{target}` -> `{target_version}`) so the update downloads the released version's archive.
+- Every version bump on `main` now creates a matching GitHub tag and release automatically, so OctoPrint's update check can find new versions.
