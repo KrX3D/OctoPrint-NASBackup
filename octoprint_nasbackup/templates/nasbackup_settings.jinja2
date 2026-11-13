@@ -339,6 +339,26 @@
                     </label>
                 </div>
             </div>
+
+            <hr style="margin:14px 0 10px;">
+            <p class="nasbackup-section-heading">{{ _("Upload verification") }}</p>
+            <div class="control-group">
+                <div class="controls">
+                    <label class="checkbox">
+                        <input type="checkbox"
+                               data-bind="checked: settings.verify_upload_size">
+                        {{ _("Compare the ZIP size on the NAS with the local file") }}
+                    </label>
+                    <label class="checkbox">
+                        <input type="checkbox"
+                               data-bind="checked: settings.verify_upload_zip">
+                        {{ _("Read the ZIP back from the NAS, compare its checksum and test the archive") }}
+                    </label>
+                    <span class="help-block muted">
+                        {{ _("A failed check marks the backup as failed and skips local pruning and NAS retention. Reading back takes about as long as the upload but writes nothing to the SD card.") }}
+                    </span>
+                </div>
+            </div>
         </div>
 
         <div class="tab-pane" id="nasbackup_tab_system">
