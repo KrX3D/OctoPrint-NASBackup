@@ -396,3 +396,15 @@ msgstr "Servername"
 
 msgid "The server name is appended automatically (servername)."
 msgstr "Der Servername wird automatisch angehängt (servername)."
+
+msgid "Upload verification"
+msgstr "Upload-Prüfung"
+
+msgid "Compare the ZIP size on the NAS with the local file"
+msgstr "Größe der ZIP auf dem NAS mit der lokalen Datei vergleichen"
+
+msgid "Read the ZIP back from the NAS, compare its checksum and test the archive"
+msgstr "ZIP vom NAS zurücklesen, Prüfsumme vergleichen und Archiv testen"
+
+msgid "A failed check marks the backup as failed and skips local pruning and NAS retention. Reading back takes about as long as the upload but writes nothing to the SD card."
+msgstr "Schlägt eine Prüfung fehl, gilt das Backup als fehlgeschlagen und lokales Aufräumen sowie die NAS-Aufbewahrung werden übersprungen. Das Zurücklesen dauert etwa so lange wie der Upload, schreibt aber nichts auf die SD-Karte."

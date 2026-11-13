@@ -6,6 +6,7 @@ from __future__ import absolute_import, unicode_literals
 
 import datetime
 import glob
+import hashlib
 import json
 import os
 import re
@@ -16,6 +17,7 @@ import tempfile
 import threading
 import time
 import traceback
+import zipfile
 from collections import deque
 
 import flask
@@ -126,6 +128,9 @@ class NasBackupPlugin(
             server_name_auto="true",
             server_name_manual="OctoPrint",
             copy_log_to_nas=False,
+            # Upload verification
+            verify_upload_size=True,
+            verify_upload_zip=True,
         )
 
     def get_settings_version(self):
@@ -786,6 +791,7 @@ class NasBackupPlugin(
                 "smbclient upload failed (exit {}): {}".format(rc, err.strip())
             )
         self._log("  ZIP upload OK.")
+        self._verify_remote_zip(zip_path, remote_zip)
 
         if self._get_bool("system_backup_enabled"):
             self._backup_system_files_smbclient(remote_snap)
@@ -932,6 +938,68 @@ class NasBackupPlugin(
             except Exception:
                 pass
 
+    def _verify_remote_zip(self, zip_path, remote_zip):
+        """Check the uploaded ZIP on the NAS. Raises RuntimeError on mismatch."""
+        check_size = self._get_bool("verify_upload_size")
+        check_zip  = self._get_bool("verify_upload_zip")
+        if not check_size and not check_zip:
+            self._log("  NAS verification disabled, skipping.")
+            return
+        local_size = os.path.getsize(zip_path)
+
+        if check_size:
+            remote_size = self._smb_remote_size(remote_zip)
+            if remote_size is None:
+                raise RuntimeError(
+                    "NAS verification failed: could not read size of {}".format(remote_zip)
+                )
+            if remote_size != local_size:
+                raise RuntimeError(
+                    "NAS verification failed: size on NAS {} bytes, local {} bytes".format(
+                        remote_size, local_size)
+                )
+            self._log("  Verify size  : OK ({} bytes on NAS).".format(remote_size))
+
+        if check_zip:
+            # Stream the NAS copy back through a hash instead of saving it,
+            # so the check costs no SD card writes or free space.
+            local_hash = self._sha256_file(zip_path)
+            remote_hash, remote_bytes, err = self._smb_stream_sha256(
+                remote_zip, timeout=max(600, local_size // 262_144))
+            if remote_hash is None:
+                raise RuntimeError(
+                    "NAS verification failed: could not read back {}: {}".format(
+                        remote_zip, err)
+                )
+            if remote_bytes != local_size or remote_hash != local_hash:
+                raise RuntimeError(
+                    "NAS verification failed: NAS copy differs from local ZIP "
+                    "({} of {} bytes read back, checksum {})".format(
+                        remote_bytes, local_size,
+                        "match" if remote_hash == local_hash else "mismatch")
+                )
+            self._log("  Verify data  : OK (SHA-256 {}...).".format(remote_hash[:16]))
+            # NAS copy is byte-identical, so testing the local ZIP tests it too.
+            try:
+                with zipfile.ZipFile(zip_path) as zf:
+                    bad = zf.testzip()
+                    count = len(zf.infolist())
+            except (zipfile.BadZipFile, OSError) as exc:
+                raise RuntimeError("NAS verification failed: ZIP is unreadable: {}".format(exc))
+            if bad is not None:
+                raise RuntimeError(
+                    "NAS verification failed: ZIP member '{}' is corrupt".format(bad)
+                )
+            self._log("  Verify ZIP   : OK ({} entries, CRC checked).".format(count))
+
+    @staticmethod
+    def _sha256_file(path):
+        h = hashlib.sha256()
+        with open(path, "rb") as f:
+            for chunk in iter(lambda: f.read(1_048_576), b""):
+                h.update(chunk)
+        return h.hexdigest()
+
     def _upload_temp_file_smbclient(self, write_fn, remote_path, suffix=".tmp"):
         fd, local = tempfile.mkstemp(prefix="nasbackup_", suffix=suffix)
         os.close(fd)
@@ -1076,33 +1144,37 @@ class NasBackupPlugin(
 
     # -- SMB helpers -----------------------------------------------------------
 
-    def _smb_exec(self, command):
+    def _smb_write_creds(self):
+        fd, cred_file = tempfile.mkstemp(prefix="nasbackup_creds_")
+        os.close(fd)
+        os.chmod(cred_file, 0o600)
+        with open(cred_file, "w") as cf:
+            cf.write("username={}\n".format(
+                self._settings.get(["smb_username"]) or "guest"))
+            cf.write("password={}\n".format(
+                self._settings.get(["smb_password"]) or ""))
+            domain = self._settings.get(["smb_domain"])
+            if domain:
+                cf.write("domain={}\n".format(domain))
+        return cred_file
+
+    def _smb_args(self, cred_file, command):
         host  = self._settings.get(["smb_host"])  or ""
         share = self._settings.get(["smb_share"]) or ""
         unc   = "//{}/{}".format(host.strip("/"), share.strip("/"))
+        smb_proto = "SMB3" if (
+            self._settings.get(["smb_version"]) or "3.0"
+        ).startswith("3") else "SMB2"
+        return ["smbclient", unc, "-A", cred_file,
+                "--option=client min protocol=SMB2",
+                "-m", smb_proto, "-c", command]
 
-        fd, cred_file = tempfile.mkstemp(prefix="nasbackup_creds_")
+    def _smb_exec(self, command, timeout=120):
+        cred_file = self._smb_write_creds()
         try:
-            os.close(fd)
-            os.chmod(cred_file, 0o600)
-            with open(cred_file, "w") as cf:
-                cf.write("username={}\n".format(
-                    self._settings.get(["smb_username"]) or "guest"))
-                cf.write("password={}\n".format(
-                    self._settings.get(["smb_password"]) or ""))
-                domain = self._settings.get(["smb_domain"])
-                if domain:
-                    cf.write("domain={}\n".format(domain))
-
-            smb_proto = "SMB3" if (
-                self._settings.get(["smb_version"]) or "3.0"
-            ).startswith("3") else "SMB2"
-
             result = subprocess.run(
-                ["smbclient", unc, "-A", cred_file,
-                 "--option=client min protocol=SMB2",
-                 "-m", smb_proto, "-c", command],
-                capture_output=True, text=True, timeout=120
+                self._smb_args(cred_file, command),
+                capture_output=True, text=True, timeout=timeout
             )
             return result.returncode, result.stdout, result.stderr
         except FileNotFoundError:
@@ -1112,6 +1184,70 @@ class NasBackupPlugin(
                 os.unlink(cred_file)
             except Exception:
                 pass
+
+    def _smb_stream_sha256(self, remote_path, timeout=600):
+        """Read a remote file via 'get <file> -' (stdout) and hash it.
+
+        Returns (hexdigest, byte_count, error) - hexdigest is None on failure.
+        """
+        cred_file = self._smb_write_creds()
+        proc = None
+        try:
+            proc = subprocess.Popen(
+                self._smb_args(cred_file, "get \"{}\" -".format(remote_path)),
+                stdout=subprocess.PIPE, stderr=subprocess.PIPE
+            )
+            # Kill smbclient if it hangs; read() below then returns EOF.
+            timer = threading.Timer(timeout, proc.kill)
+            timer.start()
+            # Drain stderr in the background so a chatty smbclient can't block.
+            err_chunks = []
+            err_thread = threading.Thread(
+                target=lambda: err_chunks.append(proc.stderr.read()), daemon=True)
+            err_thread.start()
+            h = hashlib.sha256()
+            total = 0
+            try:
+                for chunk in iter(lambda: proc.stdout.read(1_048_576), b""):
+                    h.update(chunk)
+                    total += len(chunk)
+                rc = proc.wait()
+            finally:
+                timer.cancel()
+            err_thread.join(5)
+            err = b"".join(err_chunks).decode("utf-8", "replace").strip()
+            if rc != 0:
+                return None, total, "exit {}: {}".format(rc, err)
+            return h.hexdigest(), total, ""
+        except FileNotFoundError:
+            return None, 0, "smbclient not found"
+        finally:
+            if proc is not None and proc.poll() is None:
+                proc.kill()
+            try:
+                os.unlink(cred_file)
+            except Exception:
+                pass
+
+    def _smb_remote_size(self, remote_path):
+        """Return the size in bytes of a file on the share, or None."""
+        rc, out, err = self._smb_exec("allinfo \"{}\"".format(remote_path))
+        if rc == 0:
+            m = re.search(r"stream:\s*\[::\$DATA\],\s*(\d+)\s+bytes", out)
+            if m:
+                return int(m.group(1))
+        # Fallback: parse the 'ls' line "<name>  A  <size>  <date>".
+        name = remote_path.replace("\\", "/").rsplit("/", 1)[-1]
+        rc, out, err = self._smb_exec("ls \"{}\"".format(remote_path))
+        if rc != 0:
+            return None
+        for line in out.splitlines():
+            stripped = line.strip()
+            if stripped.startswith(name):
+                m = re.match(r"\s+[A-Za-z]*\s+(\d+)\s", stripped[len(name):])
+                if m:
+                    return int(m.group(1))
+        return None
 
     def _smb_mkdir_p(self, path):
         parts   = [p for p in path.replace("\\", "/").split("/") if p]
@@ -1363,7 +1499,7 @@ class NasBackupPlugin(
 __plugin_name__         = "NAS Backup"
 __plugin_identifier__   = "nasbackup"
 __plugin_pythoncompat__ = ">=3.7,<4"
-__plugin_version__      = "0.3.25"
+__plugin_version__      = "0.3.26"
 __plugin_description__  = (
     "Automated OctoPrint backups to a NAS over SMB - "
     "scheduled (daily/weekly/monthly), GFS retention."
