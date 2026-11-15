@@ -32,9 +32,9 @@ never overrides a rule the agent's own instructions state as "never".
   error; don't hand-edit `.mo` files.
 - `.github/workflows/pr-checks.yml` validates that every `.po` file still
   compiles cleanly with `msgfmt --check`, alongside basic Python/JS syntax
-  checks. That is the current get-green baseline for this repo - there is
-  no unit test suite yet, so passing that workflow plus a clean manual
-  read of the diff is what "CI green" means here.
+  checks, and runs the pytest suite in `tests/` (OctoPrint and flask are
+  stubbed in `tests/conftest.py`). Passing that workflow plus a clean
+  manual read of the diff is what "CI green" means here.
 
 ## No Docker component
 

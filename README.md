@@ -243,3 +243,6 @@ The plugin ships with these defaults (from `get_settings_defaults()`):
 ### 0.3.26
 - Each uploaded ZIP is now verified on the NAS: its size is compared with the local file, and the NAS copy is streamed back and compared by SHA-256, then the archive is CRC-tested. A failed check marks the backup as failed and skips pruning/retention, so a broken upload never replaces good older snapshots.
 - Both checks can be turned off under Options (`verify_upload_size`, `verify_upload_zip`). The read-back is streamed and writes nothing to the SD card.
+
+### 0.3.27
+- Added a pytest suite (`tests/`) for GFS retention, startup kind detection and the NAS upload checks; it runs on every pull request on Python 3.9, 3.11 and 3.13. No behavior change.
